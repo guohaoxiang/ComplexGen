@@ -35,37 +35,32 @@ ComplexGen
     │   │
     |   └─── train
     │   │
-    |   └─── eval
+    |   └─── val
     │   │
     |   └─── test
     |   |   
     |   └─── test_point_clouds
-    |         
-    └─── noise_002
-    │   │
-    |   └─── ...
-    └─── noise_005
-    │   │
-    |   └─── ...
+    |        
     └─── partial
         │
         └─── ...
 ```
 
-Here _noise_002_ and _noise_005_ means noisy point clouds with normal-distribution-perturbation of mean value _0.02_ and _0.05_ respectively.
+<!-- Here _noise_002_ and _noise_005_ means noisy point clouds with normal-distribution-perturbation of mean value _0.02_ and _0.05_ respectively. -->
 
 ## Phase 1: ComplexNet prediction
 
 ### Environment setup with Docker
         
-        $ docker pull tensorflow/tensorflow:1.15.0-gpu-py3
-        $ docker run --runtime=nvidia --ipc=host --net=host -v /path/to/complexgen/:/workspace -t -i tensorflow/tensorflow:1.4.0-devel-gpu
+        $ docker pull pytorch/pytorch:1.6.0-cuda10.1-cudnn7-devel
+        $ docker run --runtime=nvidia --ipc=host --net=host -v /path/to/complexgen/:/workspace -t -i pytorch/pytorch:1.6.0-cuda10.1-cudnn7-devel
         $ cd /workspace
-        $ 
+        $ apt-get update && apt-get install libopenblas-dev -y && conda install numpy mkl-include pytorch cudatoolkit=10.1 -c pytorch -y && apt-get install git -y && pip install git+https://github.com/NVIDIA/MinkowskiEngine.git@v0.5.0 --user
+        $ cd chamferdist && python setup.py install --user && pip install numba --user && pip install methodtools --user && pip install tensorflow-gpu --user && pip install scipy --user && pip install plyfile --user && pip install trimesh --user && cd ..
 
 To test if the environment is set correctly, run:
         
-        $ blabla
+        $ python train_small.py
         
 This command will start the training of ComplexNet on a small dataset with 64 CAD models.
 
