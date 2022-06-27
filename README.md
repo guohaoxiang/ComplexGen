@@ -90,7 +90,7 @@ Then run:
 
         $ python scripts/test_default.py
 
-You can find the evaluation table (test_statistics.xlsx) and network prediction of each model (\*.pkl) under _ComplexGen/experiments/default/test_obj/_. The description of each pickle file (\*.pkl) can be found here (to do). 
+You can find the evaluation table (test_statistics.xlsx) and network prediction of each model (\*.pkl) under _ComplexGen/experiments/default/test_obj/_. The description of each pickle file (\*.pkl) can be found [here](docs/network_prediction_pickle_description.md). 
 
 You can also get the visualizable models of corner/curve/patch of some test data by running: 
 
