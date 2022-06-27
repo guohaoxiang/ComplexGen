@@ -7,7 +7,6 @@ import time
 from datetime import datetime
 import math
 from tkinter import E
-from azureml.core import experiment
 import numpy
 from chamferdist import knn_points
 from chamferdist import knn_gather
@@ -7653,11 +7652,11 @@ def pipeline_abc(rank, world_size):
 
   if not args.aml:
     if args.quicktest:
-      train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="train_small_1104", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer) #
+      train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer) #
 
 
       #ori version
-      val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False, flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
+      val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False, flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
 
       #modified version on 1012
       # val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/val_fix_900", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv)#data_folder="/mnt/data/shilin/detr/ABC/train",
