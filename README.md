@@ -60,7 +60,7 @@ ComplexGen
 
 To test if the environment is set correctly, run:
         
-        $ python train_small.py
+        $ python scripts/train_small.sh
         
 This command will start the training of ComplexNet on a small dataset with 64 CAD models.
 
@@ -83,13 +83,13 @@ ComplexGen
 
 Then run:
 
-        $ python scripts/test_default.py
+        $ python scripts/test_default.sh
 
 You can find the evaluation table (test_statistics.xlsx) and network prediction of each model (\*.pkl) under _ComplexGen/experiments/default/test_obj/_. The description of each pickle file (\*.pkl) can be found [here](docs/network_prediction_pickle_description.md). 
 
 You can also get the visualizable models of corner/curve/patch of some test data by running: 
 
-        $ python scripts/test_default_vis.py
+        $ python scripts/test_default_vis.sh
 
 A set of 3D models will be generated under _ComplexGen/experiments/default/vis_test/_ which can be visualized using 3D softwares like [MeshLab](https://www.meshlab.net/).
 
@@ -99,7 +99,7 @@ We also provided the forwarded pickle file here (todo). If you want to use it, p
 
 If you want to train ComplexNet from scratch, run:
 
-        $ python scripts/train_default.py
+        $ python scripts/train_default.sh
 
 By default, the ComplexNet is trained on a server with 8 V100 GPUs.
 You can change the numder of GPUs by setting the _--gpu_ flag in scripts/train_default, and change batch size by setting the _batch_size_ flag.
