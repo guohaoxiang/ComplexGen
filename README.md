@@ -10,7 +10,7 @@ Guo H X, Liu S L, Pan H, Liu Y, Tong X, Guo B N. ComplexGen: CAD Reconstruction 
 
 [Paper](https://haopan.github.io/papers/ComplexGen.pdf) | [Project Page](https://haopan.github.io/complexgen.html)
 
-Abstract: _We view the reconstruction of CAD models in the boundary representation (B-Rep) as the detection of geometric primitives of different orders, i.e. vertices, edges and surface patches, and the correspondence of primitives, which are holistically modeled as a chain complex, and show that by modeling such comprehensive structures more complete and regularized reconstructions can be achieved.
+Abstract: _We view the reconstruction of CAD models in the boundary representation (B-Rep) as the detection of geometric primitives of different orders, i.e., vertices, edges and surface patches, and the correspondence of primitives, which are holistically modeled as a chain complex, and show that by modeling such comprehensive structures more complete and regularized reconstructions can be achieved.
 We solve the complex generation problem in two steps.
 First, we propose a novel neural framework that consists of a sparse CNN encoder for input point cloud processing and a tri-path transformer decoder for generating geometric primitives and their mutual relationships with estimated probabilities.
 Second, given the probabilistic structure predicted by the neural network, we recover a definite B-Rep chain complex by solving a global optimization maximizing the likelihood under structural validness constraints and applying geometric refinements.
@@ -69,14 +69,9 @@ To test if the environment is set correctly, run:
         
 This command will start the training of ComplexNet on a small dataset with 64 CAD models.
 
-### Training
+### Testing
 
-By default, the ComplexNet is trained on a server with 8 V100 GPUs:
-
-        $ python scripts/train_default.py
-
-You can change the numder of GPUs by setting the _--gpu_ flag in scripts/train_default, and change batchsize by setting the _batch_size_ flag.
-The training takes about 3 days to converge. We also provide the trained weights used in our paper here(to do). If you want to use it, please download and unzip it under the root directory:
+To test the trained ComplexNet, please first download the trained weights used in our paper here(to do), and unzip it under the root directory:
 
 ```
 ComplexGen
@@ -91,9 +86,7 @@ ComplexGen
     └─── ...
 ```
 
-### Testing
-
-To test the trained ComplexNet, run:
+Then run:
 
         $ python scripts/test_default.py
 
@@ -106,6 +99,17 @@ You can also get the visualizable models of corner/curve/patch of some test data
 A set of 3D models will be generated under _ComplexGen/experiments/default/vis_test/_ which can be visualized using 3D softwares like [MeshLab](https://www.meshlab.net/).
 
 We also provided the forwarded pickle file here (todo). If you want to use it, please download and unzip it under the root directory.
+
+### Training
+
+If you want to train ComplexNet from scratch, run:
+
+        $ python scripts/train_default.py
+
+By default, the ComplexNet is trained on a server with 8 V100 GPUs.
+You can change the numder of GPUs by setting the _--gpu_ flag in scripts/train_default, and change batch size by setting the _batch_size_ flag.
+The training takes about 3 days to converge. 
+
 
 ## Phase 2: Complex extraction
 
