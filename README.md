@@ -25,7 +25,7 @@ The pipeline contains 3 main phases, we will show how to run the code for each p
 ## Data downloading
 We provide the pre-processed ABC dataset here (to do). You can find the details of pre-processing pipelines in the [supplemental material](https://haopan.github.io/data/ComplexGen_supplemental.zip) of our paper.
 
-The data contains surface points along with normals, and its ground truth B-Rep labels. The data should be organized as the following structure:
+The data contains surface points along with normals, and its ground truth B-Rep labels. After extracting the zip file under root directory, the data should be organized as the following structure:
 ```
 ComplexGen
 │
@@ -56,15 +56,71 @@ Here _noise_002_ and _noise_005_ means noisy point clouds with normal-distributi
 
 ## Phase 1: ComplexNet prediction
 
-        $ cd cext
-        $ mkdir build
-        $ cd build
-        $ cmake ..
-        $ make
+### Environment setup with Docker
+        
+        $ docker pull tensorflow/tensorflow:1.15.0-gpu-py3
+        $ docker run --runtime=nvidia --ipc=host --net=host -v /path/to/complexgen/:/workspace -t -i tensorflow/tensorflow:1.4.0-devel-gpu
+        $ cd /workspace
+        $ 
+
+To test if the environment is set correctly, run:
+        
+        $ blabla
+        
+This command will start the training of ComplexNet on a small dataset with 64 CAD models.
+
+### Training
+
+By default, the ComplexNet is trained on a server with 8 V100 GPUs:
+
+        $ python scripts/train_default.py
+
+You can change the numder of GPUs by setting the _--gpu_ flag in scripts/train_default, and change batchsize by setting the _batch_size_ flag.
+The training takes about 3 days to converge. We also provide the trained weights used in our paper here(to do). If you want to use it, please download and unzip it under the root directory:
+
+```
+ComplexGen
+│
+└─── experiments
+    │
+    └─── default
+    │   │
+    |   └─── ckpt
+    │       │
+    |       └─── *.pth
+    └─── ...
+```
+
+### Testing
+
+To test the trained ComplexNet, run:
+
+        $ python scripts/test_default.py
+
+You can find the evaluation table (test_statistics.xlsx) and network prediction of each model (\*.pkl) under _ComplexGen/experiments/default/test_obj/_. The description of each pickle file (\*.pkl) can be found here (to do). 
+
+You can also get the visualizable models of corner/curve/patch of some test data by running: 
+
+        $ python scripts/test_default_vis.py
+
+A set of 3D models will be generated under _ComplexGen/experiments/default/vis_test/_ which can be visualized using 3D softwares like [MeshLab](https://www.meshlab.net/).
+
+We also provided the forwarded pickle file here (todo). If you want to use it, please download and unzip it under the root directory.
 
 ## Phase 2: Complex extraction
 
+### Environment setup
+
+gurobi
+
+license
+
+
 ## Phase 3: Geometric refinement
+
+### Environment setup
+
+libigl
 
 ## Test on your own point cloud
 If you want to use our trained model to test on your own point cloud, please follow these steps:
@@ -99,4 +155,4 @@ MIT Licence
 Please contact us (Haoxiang Guo guohaoxiangxiang@gmail.com) if you have any question about our implementation.
 
 ## Acknowledgement
-This implementation takes [DETR](https://github.com/facebookresearch/detr) and [Geometric Tools](https://github.com/davideberly/GeometricTools) as a reference. We thank the authors for their excellent work.
+This implementation takes [DETR](https://github.com/facebookresearch/detr) and [Geometric Tools](https://github.com/davideberly/GeometricTools) as references. We thank the authors for their excellent work.
