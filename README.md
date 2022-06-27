@@ -35,24 +35,18 @@ ComplexGen
     │   │
     |   └─── train
     │   │
-    |   └─── eval
+    |   └─── val
     │   │
     |   └─── test
     |   |   
     |   └─── test_point_clouds
-    |         
-    └─── noise_002
-    │   │
-    |   └─── ...
-    └─── noise_005
-    │   │
-    |   └─── ...
+    |        
     └─── partial
         │
         └─── ...
 ```
 
-Here _noise_002_ and _noise_005_ means noisy point clouds with normal-distribution-perturbation of mean value _0.02_ and _0.05_ respectively.
+<!-- Here _noise_002_ and _noise_005_ means noisy point clouds with normal-distribution-perturbation of mean value _0.02_ and _0.05_ respectively. -->
 
 ## Phase 1: ComplexNet prediction
 
