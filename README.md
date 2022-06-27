@@ -33,13 +33,14 @@ ComplexGen
     │
     └─── default
     │   │
-    |   └─── packed
-    |   |   |
-    |   |   └─── *.pkl
-    │   |
-    |   └─── point_clouds
-    |       |
-    |       └─── *.ply    
+    |   └─── train
+    │   │
+    |   └─── eval
+    │   │
+    |   └─── test
+    |   |   
+    |   └─── test_point_clouds
+    |         
     └─── noise_002
     │   │
     |   └─── ...
