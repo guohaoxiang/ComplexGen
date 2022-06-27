@@ -63,7 +63,6 @@ Here _noise_002_ and _noise_005_ means noisy point clouds with normal-distributi
         $ cd /workspace
         $ apt-get update && apt-get install libopenblas-dev -y && conda install numpy mkl-include pytorch cudatoolkit=10.1 -c pytorch -y && apt-get install git -y && pip install git+https://github.com/NVIDIA/MinkowskiEngine.git@v0.5.0 --user
         $ cd chamferdist && python setup.py install --user && pip install numba --user && pip install methodtools --user && pip install tensorflow-gpu --user && pip install scipy --user && pip install plyfile --user && pip install trimesh --user && cd ..
-        $ 
 
 To test if the environment is set correctly, run:
         
