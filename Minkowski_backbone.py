@@ -29,7 +29,7 @@ else:
   from load_ply import *
 
 m = 32 #Unet number of features
-#for hypernets
+#HyperNets parameters
 hn_pe_dim = 64
 hn_mlp_dim = 64
 def get_args_parser():
@@ -78,7 +78,6 @@ def get_args_parser():
     parser.add_argument('--vis_train', action = 'store_true', help = 'visualize training data')
     parser.add_argument('--vis_test', action = 'store_true', help = 'visualize test data')
     parser.add_argument('--eval_train', action = 'store_true', help = 'evaluate training data')
-    parser.add_argument('--pretrain', action = 'store_true', help = 'using pretrained backbone')
     parser.add_argument('--geom_l2', action = 'store_true', help = 'use l2 norm for geometric terms')
     parser.add_argument('--patch_grid', action = 'store_true', help = 'using patch grid')
     parser.add_argument('--patch_close', action = 'store_true', help = 'predict patch closeness')
@@ -86,27 +85,17 @@ def get_args_parser():
     parser.add_argument('--patch_emd', action = 'store_true', help = 'using emd for patch loss computing, not implemented yet')
     parser.add_argument('--patch_uv', action = 'store_true', help = 'compute patch uv, and patch emd is computed based on patch uv')
     parser.add_argument('--curve_open_loss', action = 'store_true', help = 'using emd for patch loss computing, not implemented yet')
-    parser.add_argument('--pretrain_backbone', action = 'store_true', help = 'pretrain backbone')
     parser.add_argument('--backbone_expand', action = 'store_true', help = 'expand backbone coordinates and kernel size of the first convolution')
-
-    # parser.add_argument('--dist_th', df)
 
     parser.add_argument('--output_normal', action = 'store_true', help = 'output normal for prediction')
     parser.add_argument('--output_normal_diff_coef', default=1, type=float, help="loss coefficient for output normal diff loss")
-
     parser.add_argument('--output_normal_tangent_coef', default=1, type=float, help="loss coefficient for output normal tangent lonss")
-
-    
-
     parser.add_argument('--enable_automatic_restore', action='store_true', help = 'find ckpt automatically when training is interrupted')
     parser.add_argument('--quicktest', action='store_true', help = 'only test on 10 models, no validation is used')
     # parser.add_argument('--noise', action='store_true', help = 'add noise')
     parser.add_argument('--noise', default=0, type=int, help = 'add noise, 0:no, 1: 0.01, 2: 0.02, 3: 0.05')
     parser.add_argument('--noisetest', default=0, type=int, help = 'add noise for testing, 0:no, 1: 0.01, 2: 0.02, 3: 0.05')
-
     parser.add_argument('--partial', action='store_true', help = 'use partial data')
-    
-
     parser.add_argument('--experiment_name', type=str, required = True)
     parser.add_argument('--lr', default=1e-4, type=float)
     parser.add_argument('--lr_drop', default=5000, type=int)
@@ -116,18 +105,12 @@ def get_args_parser():
     parser.add_argument('--eval_matched', action='store_true', help="evaluate residual loss and coverage", default=True)
     parser.add_argument('--eval_selftopo', action='store_true', help="evaluate self topo consistency")
     parser.add_argument('--th_res', default=0.05, type=float, help="threshold for evaluating residual")
-
     parser.add_argument('--eval_param', action='store_true', help="evaluate residual and converage by parameters")
-
     parser.add_argument('--evalrest', action='store_true', help="evaluate rest data of 900 models")
     parser.add_argument('--part', default=-1, type=int) #0,1,2,3, divide data into 4 groups
     parser.add_argument('--regen', action='store_true', help="regen files")
     parser.add_argument('--wsa', action='store_true', help="working on wsa")
-
-
-
     parser.add_argument('--th_cov', default=0.01, type=float)
-    
     parser.add_argument('--rotation_augment', action='store_true', help="enable rotation augmentation")
     parser.add_argument('--num_angles', type=int)
     parser.add_argument('--random_angle', action='store_true', help="enable rotation augmentation with random angle")
@@ -177,17 +160,11 @@ def get_args_parser():
     parser.add_argument("--normalize_embed_feature", action="store_true", help="Normalize Topo Feature before Matching")
     parser.add_argument("--num_heads_dot", default=1, type=int, help="number of heads to compute similarity")
     parser.add_argument("--matrix_eigen_similarity", action="store_true", help="Using Matrix Eigen Similarity")
-    
-    
     # * Loss coefficients
     parser.add_argument('--class_loss_coef', default=1, type=float)
     parser.add_argument('--corner_geometry_loss_coef', default=1000, type=float, help="loss coefficient for geometric loss in corner matching and training")
     parser.add_argument('--curve_geometry_loss_coef', default=1000, type=float, help="loss coefficient for geometric loss in curve matching and training")
     parser.add_argument('--patch_geometry_loss_coef', default=1000, type=float, help="loss coefficient for geometric loss in patch matching and training")
-    # parser.add_argument('--corner_eos_coef', default=0.11, type=float, help="Relative classification weight of the no-object class, prevent invalid elements dominant the cross entropy loss")
-    # parser.add_argument('--curve_eos_coef', default=0.25, type=float, help="Relative classification weight of the no-object class")
-    # parser.add_argument('--patch_eos_coef', default=0.11, type=float, help="Relative classification weight of the no-object class")
-
     parser.add_argument('--corner_avg_count', default=20.25, type=float, help="avg corner count for parsenet dataset")
     parser.add_argument('--curve_avg_count', default=37.39, type=float, help="avg curve count for parsenet dataset")
     parser.add_argument('--patch_avg_count', default=18.17, type=float, help="avg patch count for parsenet dataset")
@@ -4208,27 +4185,6 @@ class EncoderDecoder(nn.Module):
     # return output.C, output.F
     return output
   
-
-def build_pretrain_backbone(device, flag_eval = False):
-  ############# BackBone Network sparseCNN to Extract Features #############
-
-  # backbone = ME.MinkowskiSyncBatchNorm.convert_sync_batchnorm(Sparse_Backbone_Minkowski())
-  backbone = Sparse_Backbone_Minkowski()
-
-  if not args.decoder_rec:
-    if not args.backbone_bn:
-      decoder = resnets.ResNetDecoderOur(in_channels=m*6, out_channels=7 if args.input_normal_signals else 4, D=3) #position, normal, 1
-    else:
-      decoder = resnets.ResNetDecoderOurBn(in_channels=m*6, out_channels=7 if args.input_normal_signals else 4, D=3) #position, normal, 1
-  else:
-    decoder = resnets.ResNetDecoderRecBn(in_channels=m*6, out_channels=7 if args.input_normal_signals else 4, D=3) #position, normal, 1
-
-  
-  encoderdecoder = EncoderDecoder(backbone, decoder).to(device)
-  # encoderdecoder = None
-
-  return encoderdecoder
-
 def build_unified_model_tripath(device, flag_eval = False):
   ############# BackBone Network sparseCNN to Extract Features #############
   
@@ -6641,192 +6597,6 @@ def export_patches_off(patch_points, export_off_filename):
   save_mesh_off(export_off_filename, verts, faces, face_mask)
 
 
-def eval_backbone(flag_eval = True):
-  if args.quicktest:
-    # train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="train_small",  with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise)#data_folder="/mnt/data/shilin/detr/ABC/train",
-    train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="train_small",  with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, flag_backbone=args.pretrain_backbone)#data_folder="/mnt/data/shilin/detr/ABC/train",
-  else:
-    # train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="val_tmp", with_distribute_sampler=False, flag_quick_test=args.quicktest)#data_folder="/mnt/data/shilin/detr/ABC/test",
-    # train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="/mnt/sdf1/haog/data/train_new", with_distribute_sampler=False, flag_quick_test=args.quicktest)#data_folder="/mnt/data/shilin/detr/ABC/test",
-    vis_train_folder = "vis_train"
-    vis_test_folder = "vis_test"
-    test_folder = "/mnt/sdf1/haog/data/test_new"
-    if args.parsenet:
-      vis_train_folder = "vis_train_parsenet"
-      # vis_train_folder = "vis_tmp"
-      vis_test_folder = "vis_test_parsenet"
-      test_folder = "/mnt/sdf1/haog/data/data_parsenet_fix_test"
-    
-    if args.vis_train:
-      train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder=vis_train_folder, with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, flag_backbone=args.pretrain_backbone)#data_folder="/mnt/data/shilin/detr/ABC/test",
-    elif args.vis_test:
-      train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder=vis_test_folder, with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, flag_backbone=args.pretrain_backbone)#data_folder="/mnt/data/shilin/detr/ABC/test",
-    else:
-      train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder=test_folder, with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, flag_backbone=args.pretrain_backbone)#data_folder="/mnt/data/shilin/detr/ABC/test",
-      # train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="/mnt/sdf1/haog/data/train_small", with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise)#data_folder="/mnt/data/shilin/detr/ABC/test",
-      
-
-  device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-  disable_aux_loss_output = True
-  #torch.autograd.set_detect_anomaly(True)
-  tf.compat.v1.disable_eager_execution()
-  encoderdecoder = build_pretrain_backbone(device)
-  model_without_ddp = encoderdecoder
-
-  param_dicts = [{"params": [p for n, p in model_without_ddp.named_parameters() if p.requires_grad]}]
-  optimizer = torch.optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
-  lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, args.lr_drop)
-  log_dir, obj_dir, checkpoint_dir = prepare_experiment_folders(args.experiment_name)
-  if(os.path.exists("experiments/default.mtl") and not os.path.exists(os.path.join(obj_dir, "default.mtl"))):
-    os.system("cp experiments/default.mtl {}".format(obj_dir))
-
-  experiment_dir = os.path.join("experiments", args.experiment_name)
-
-  test_folder = 'test_obj'
-  if args.vis_train:
-    test_folder = 'vis_train'
-  elif args.vis_test:
-    test_folder = 'vis_test'
-
-  testobj_dir = os.path.join(experiment_dir, test_folder)
-  if(not os.path.exists(testobj_dir)): os.mkdir(testobj_dir)
-  if(os.path.exists("experiments/default.mtl") and not os.path.exists(os.path.join(testobj_dir, "default.mtl"))):
-    os.system("cp experiments/default.mtl {}".format(testobj_dir))
-
-  start_iterations = 0
-  print("Try to restore from checkpoint")
-  if(args.checkpoint_path is not None):
-    if(os.path.exists(args.checkpoint_path)):
-      print("resume training using {}".format(args.checkpoint_path))
-      checkpoint = torch.load(args.checkpoint_path, map_location='cpu')
-      model_without_ddp.load_state_dict(checkpoint['model'])
-      optimizer.load_state_dict(checkpoint['optimizer'])
-      lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-      start_iterations = checkpoint['epoch'] + 1
-    else:
-      print("specified checkpoint file cannot be found: {}".format(args.checkpoint_path))
-  elif(args.enable_automatic_restore):
-    print("trying to restore automatically")
-    all_ckpt = os.listdir(checkpoint_dir)
-    restore_ckpt = None
-    restore_ckpt_epoches = -1
-    for ckpt_file in all_ckpt:
-      if(ckpt_file.endswith(".pth")):
-        ckpt_epoches = int(ckpt_file.split('_')[1].split(".")[0])
-        if(ckpt_epoches > restore_ckpt_epoches):
-          restore_ckpt_epoches = ckpt_epoches
-          restore_ckpt = os.path.join(checkpoint_dir, ckpt_file)
-    if(restore_ckpt is not None):
-      print("find available ckpt file:", restore_ckpt)
-      checkpoint = torch.load(restore_ckpt, map_location='cpu')
-      model_without_ddp.load_state_dict(checkpoint['model'])
-      optimizer.load_state_dict(checkpoint['optimizer'])
-      lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-      start_iterations = checkpoint['epoch'] + 1
-    else:
-      print("cannot find available ckpt file")
-  
-  #model evaluation
-  data_loader_iterator = iter(train_data)
-  sample_count = 0
-  while(True):
-    try:
-      data_item = next(data_loader_iterator)
-    except StopIteration:
-      #data_loader_iterator = iter(train_data)
-      #data_item = next(data_loader_iterator)
-      break
-    sample_count+=1
-    locations = data_item[0].to(device)
-    features = data_item[1].to(device)
-    batch_sample_id = data_item[4]
-    # dec_loc, dec_fea = encoderdecoder(locations, features)
-    output = encoderdecoder(locations, features)
-    dec_loc = output.C
-    dec_fea = output.F
-    print('sample_id: ', batch_sample_id)
-    prefix = batch_sample_id[0].split('.')[0]
-    np.savetxt(os.path.join(obj_dir, '{}_input_fea.xyz'.format(prefix)), features[:,:6].detach().cpu().numpy())
-    np.savetxt(os.path.join(obj_dir, '{}_output_fea.xyz'.format(prefix)), dec_fea[:,:6].detach().cpu().numpy())
-    # np.savetxt('input_pos.xyz', locations[:,:3].detach().cpu().numpy())
-    # np.savetxt('output_pos.xyz', dec_loc[:,1:].detach().cpu().numpy())
-
-  return 
-  
-  #ori version
-  if args.no_tri:
-    model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model(device, flag_eval)
-  else:
-    model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model_tripath(device, flag_eval)
-
-  model_without_ddp = model_shape
-  
-  param_dicts = [{"params": [p for n, p in model_without_ddp.named_parameters() if p.requires_grad]}]
-  
-  corner_topo_params = {n:p for n, p in model_without_ddp.named_parameters() if p.requires_grad and 'corner_model.corner_topo_embed' in n}
-  corner_geometry_params = {n:p for n, p in model_without_ddp.named_parameters() if p.requires_grad and 'corner_model.corner_position_embed' in n}
-  
-  optimizer = torch.optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
-  lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, args.lr_drop)
-  
-  log_dir, obj_dir, checkpoint_dir = prepare_experiment_folders(args.experiment_name)
-  if(os.path.exists("experiments/default.mtl") and not os.path.exists(os.path.join(obj_dir, "default.mtl"))):
-    os.system("cp experiments/default.mtl {}".format(obj_dir))
-
-  experiment_dir = os.path.join("experiments", args.experiment_name)
-
-  test_folder = 'test_obj'
-  if args.vis_train:
-    test_folder = 'vis_train'
-  elif args.vis_test:
-    test_folder = 'vis_test'
-
-  testobj_dir = os.path.join(experiment_dir, test_folder)
-  if(not os.path.exists(testobj_dir)): os.mkdir(testobj_dir)
-  if(os.path.exists("experiments/default.mtl") and not os.path.exists(os.path.join(testobj_dir, "default.mtl"))):
-    os.system("cp experiments/default.mtl {}".format(testobj_dir))
-  
-  start_iterations = 0
-  print("Try to restore from checkpoint")
-  if(args.checkpoint_path is not None):
-    if(os.path.exists(args.checkpoint_path)):
-      print("resume training using {}".format(args.checkpoint_path))
-      checkpoint = torch.load(args.checkpoint_path, map_location='cpu')
-      model_without_ddp.load_state_dict(checkpoint['model'])
-      optimizer.load_state_dict(checkpoint['optimizer'])
-      lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-      start_iterations = checkpoint['epoch'] + 1
-    else:
-      print("specified checkpoint file cannot be found: {}".format(args.checkpoint_path))
-  elif(args.enable_automatic_restore):
-    print("trying to restore automatically")
-    all_ckpt = os.listdir(checkpoint_dir)
-    restore_ckpt = None
-    restore_ckpt_epoches = -1
-    for ckpt_file in all_ckpt:
-      if(ckpt_file.endswith(".pth")):
-        ckpt_epoches = int(ckpt_file.split('_')[1].split(".")[0])
-        if(ckpt_epoches > restore_ckpt_epoches):
-          restore_ckpt_epoches = ckpt_epoches
-          restore_ckpt = os.path.join(checkpoint_dir, ckpt_file)
-    if(restore_ckpt is not None):
-      print("find available ckpt file:", restore_ckpt)
-      checkpoint = torch.load(restore_ckpt, map_location='cpu')
-      model_without_ddp.load_state_dict(checkpoint['model'])
-      optimizer.load_state_dict(checkpoint['optimizer'])
-      lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-      start_iterations = checkpoint['epoch'] + 1
-    else:
-      print("cannot find available ckpt file")
-  
-  if not args.evalfinal and not args.evaltopo:
-    return model_evaluation(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output, test_folder = test_folder)
-  elif args.evalfinal:
-    return model_evaluation_from_file(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output)
-  elif args.evaltopo:
-    return model_evaluation_topo(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output)
-  
-
 def eval_pipeline(flag_eval = True):  
   # fix the seed for reproducibility
   '''
@@ -7223,359 +6993,6 @@ def eval_files():
   filepath = os.path.join(path, 'final_triplecd.xlsx')
   df.to_excel(filepath, index=True)  
 
-def pretrain_backbone(rank, world_size):
-  # dist.init_process_group(backend='nccl', init_method='tcp://127.0.0.1:23256', world_size=world_size, rank=rank)
-  dist.init_process_group(backend='nccl', init_method='tcp://127.0.0.1:23257', world_size=world_size, rank=rank)
-
-  assert(is_dist_avail_and_initialized())
-  assert(get_world_size() == world_size)
-  
-  # fix the seed for reproducibility
-  '''
-  seed = args.seed + rank
-  torch.manual_seed(seed)
-  np.random.seed(seed)
-  random.seed(seed)
-  '''
-  
-  #default parameters:
-  #input_feature_type: global
-  #backbone_feature_encode: false
-  #rotation_augment: false
-  #input normal signal: false
-  if not args.aml:
-    if args.quicktest:
-      train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, flag_backbone=args.pretrain_backbone) #
-      # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/val_new_64", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise) #
-      # val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/val_new", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False, flag_noise=args.noise, flag_grid = args.patch_grid)#data_folder="/mnt/data/shilin/detr/ABC/train",
-      val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False, flag_noise=args.noise, flag_grid = args.patch_grid, flag_backbone=args.pretrain_backbone)#data_folder="/mnt/data/shilin/detr/ABC/train",
-
-    else:
-      #distrubted sampler only used for set epoches
-      if not args.data_medium:
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/train_new", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise) #"/mnt/data/shilin/detr/ABC/train"
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/train_new_aug", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest) #"/mnt/data/shilin/detr/ABC/train"
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/train_new_50k", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest) #"/mnt/data/shilin/detr/ABC/train"
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/data_parsenet_train_oripkl", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest) #"/mnt/data/shilin/detr/ABC/train"
-        train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/data_parsenet_fix_train", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_grid = args.patch_grid, flag_backbone=args.pretrain_backbone) #"/mnt/data/shilin/detr/ABC/train"
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/tmp", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_grid = args.patch_grid) #"/mnt/data/shilin/detr/ABC/train"
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/data_parsenet_fix_test", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_grid = args.patch_grid) #"/mnt/data/shilin/detr/ABC/train"
-
-      else:
-        train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/train_medium", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, flag_backbone=args.pretrain_backbone) #"/mnt/data/shilin/detr/ABC/train"
-      if not args.patch_grid:
-        val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/val_new", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, flag_backbone=args.pretrain_backbone)#data_folder="/mnt/data/shilin/detr/ABC/train",
-      else:
-        val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/val_fix_64", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, flag_backbone=args.pretrain_backbone)#data_folder="/mnt/data/shilin/detr/ABC/train",
-  else:
-    if args.quicktest:
-      train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise,flag_grid = args.patch_grid) #
-      val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise,flag_grid = args.patch_grid, flag_backbone=args.pretrain_backbone)#data_folder="/mnt/data/shilin/detr/ABC/train",
-    else:
-      if args.parsenet:
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="ABC/data_parsenet_train_oripkl", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid) #
-        train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="ABC/data_parsenet_perpatch_train", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, flag_backbone=args.pretrain_backbone) #
-
-      else:
-        if not args.data_medium:
-          train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="ABC/train_new", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, flag_backbone=args.pretrain_backbone) #
-        else:
-          train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="ABC/train_medium", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, flag_backbone=args.pretrain_backbone) #
-      # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="ABC/train_new_aug", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest) #
-      # val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="val_new", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise)
-      #data_folder="/mnt/data/shilin/detr/ABC/train",
-      if not args.patch_grid:
-        val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="val_new_64", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, flag_backbone=args.pretrain_backbone)#data_folder="/mnt/data/shilin/detr/ABC/train",
-      else:
-        val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="val_perpatch_900", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, flag_backbone=args.pretrain_backbone)#data_folder="/mnt/data/shilin/detr/ABC/train",
-
-
-  torch.cuda.set_device(rank)
-  device = 'cuda:{}'.format(rank) if torch.cuda.is_available() else 'cpu'
-  disable_aux_loss_output = True
-  #torch.autograd.set_detect_anomaly(True)
-  tf.compat.v1.disable_eager_execution()
-
-  encoderdecoder = build_pretrain_backbone(device)
-  encoderdecoder = torch.nn.parallel.DistributedDataParallel(encoderdecoder, device_ids=[rank]) #,find_unused_parameters=True
-  model_without_ddp = encoderdecoder.module
-  
-
-  # if args.no_tri:
-  #   model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model(device)
-  # else:
-  #   model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model_tripath(device)
-  
-  # model_shape = torch.nn.parallel.DistributedDataParallel(model_shape, device_ids=[rank]) #,find_unused_parameters=True
-  # model_without_ddp = model_shape.module
-  
-  param_dicts = [{"params": [p for n, p in model_without_ddp.named_parameters() if p.requires_grad]}]
-  
-  # if args.ori_topo:
-  #   corner_topo_params = {n:p for n, p in model_without_ddp.named_parameters() if p.requires_grad and 'corner_model.corner_topo_embed' in n}
-  # else:
-  #   corner_topo_params = {n:p for n, p in model_without_ddp.named_parameters() if p.requires_grad and ('corner_model.corner_topo_embed_curve' in n or 'curve_model.curve_topo_embed_corner' in n or 'corner_model.corner_topo_embed_patch' in n or 'patch_model.patch_topo_embed_corner' in n)}
-  # corner_geometry_params = {n:p for n, p in model_without_ddp.named_parameters() if p.requires_grad and 'corner_model.corner_position_embed' in n}
-  # #print(corner_topo_params)
-  # #print(corner_geometry_params)
-  
-  optimizer = torch.optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
-  lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, args.lr_drop, gamma = 0.5)
-  
-  if(rank == 0):
-    log_dir, obj_dir, checkpoint_dir = prepare_experiment_folders(args.experiment_name)
-    if(os.path.exists("experiments/default.mtl") and not os.path.exists(os.path.join(obj_dir, "default.mtl"))):
-      os.system("cp experiments/default.mtl {}".format(obj_dir))
-  
-  dist.barrier()
-  log_dir, obj_dir, checkpoint_dir = prepare_experiment_folders(args.experiment_name)
-  exp_dir = os.path.join("experiments", args.experiment_name)
-  log_dir_aml = os.path.join(exp_dir, "logs")
-  
-  start_iterations = 0
-  if(rank == 0):
-    print("Try to restore from checkpoint")
-  
-  # if args.pretrain:
-  #   #using backbone pretrained model
-  #   print ("using pretrained model")
-  #   assert(os.path.exists(pretrain_path))
-  #   checkpoint = torch.load(pretrain_path, map_location='cpu')
-  #   state_dict = checkpoint['model']
-  #   for k in list(state_dict.keys()):
-  #     if not k.startswith('backbone'):
-  #       del state_dict[k]
-  #   model_without_ddp.load_state_dict(state_dict, strict=False)
-
-  if(args.checkpoint_path is not None):
-    if(os.path.exists(args.checkpoint_path)):
-      print("resume training using {}".format(args.checkpoint_path))
-      checkpoint = torch.load(args.checkpoint_path, map_location='cpu')
-      model_without_ddp.load_state_dict(checkpoint['model'])
-      optimizer.load_state_dict(checkpoint['optimizer'])
-      lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-      start_iterations = checkpoint['epoch'] + 1
-    else:
-      print("specified checkpoint file cannot be found: {}".format(args.checkpoint_path))
-  elif(args.enable_automatic_restore):
-    print("trying to restore automatically")
-    all_ckpt = os.listdir(checkpoint_dir)
-    restore_ckpt = None
-    restore_ckpt_epoches = -1
-    for ckpt_file in all_ckpt:
-      if(ckpt_file.endswith(".pth")):
-        ckpt_epoches = int(ckpt_file.split('_')[1].split(".")[0])
-        if(ckpt_epoches > restore_ckpt_epoches):
-          restore_ckpt_epoches = ckpt_epoches
-          restore_ckpt = os.path.join(checkpoint_dir, ckpt_file)
-    if(restore_ckpt is not None):
-      print("find available ckpt file:", restore_ckpt)
-      checkpoint = torch.load(restore_ckpt, map_location='cpu')
-      model_without_ddp.load_state_dict(checkpoint['model'])
-      optimizer.load_state_dict(checkpoint['optimizer'])
-      lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-      start_iterations = checkpoint['epoch'] + 1
-    else:
-      print("cannot find available ckpt file")
-  
-  training_range = range(start_iterations, args.max_training_iterations)
-  if(not running_onCluster and rank == 0): training_range = tqdm(training_range)
-  
-  #testing for validation part
-  # val_data_sampler.set_epoch(0)
-  # distribute_sampler.set_epoch(0)
-  # summary_ref = {}
-  # summary_ref['corner_curve_geom'] = 0.0
-  # summary_ref['corner_curve_topo'] = 0.0
-  # summary_ref['corner_loss_ce'] = 0.0
-  # summary_ref['corner_loss_geometry'] = 0.0
-  # summary_ref['corner_valid_accuracy'] = 0.0
-  # summary_ref['curve_loss_curve_closed'] = 0.0
-  # summary_ref['curve_loss_curve_type_ce'] = 0.0
-  # summary_ref['curve_loss_geometry'] = 0.0
-  # summary_ref['curve_loss_valid_ce'] = 0.0
-  # summary_ref['curve_type_accuracy'] = 0.0
-  # summary_ref['curve_valid_accuracy'] = 0.0
-  # summary_ref['patch_curve_topo'] = 0.0
-  # summary_ref['patch_loss_geometry'] = 0.0
-  # summary_ref['patch_loss_patch_type_ce'] = 0.0
-  # summary_ref['patch_loss_valid_ce'] = 0.0
-  # summary_ref['patch_type_accuracy'] = 0.0
-  # summary_ref['patch_valid_accuracy'] = 0.0
-  # summary_ref['total_loss'] = 0.0
-
-
-  # val_summary_loss_dict = get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, val_data, device, 0, summary_ref)
-  # val_summary_loss_dict_reduced = reduce_dict(val_summary_loss_dict)
-  # return
-
-  if(rank == 0):
-    summary_writer = tf.compat.v1.summary.FileWriter(log_dir)
-    print("Start Training")  
-    print("train data size {}".format(len(train_data)))
-  data_loader_iterator = iter(train_data)
-  cur_epochs = 0
-  val_epochs = 0
-  distribute_sampler.set_epoch(cur_epochs)
-  w_pos = 5.0
-  for train_iter in training_range:
-      #if(train_iter % 500 == 0): torch.cuda.empty_cache()
-    # with torch.autograd.profiler.profile(enabled=True, use_cuda=True, record_shapes=False, profile_memory=False) as prof:
-    if True:
-      encoderdecoder.train()
-      ############# Prepare Input #############
-      t0 = time.time()
-      try:
-        data_item = next(data_loader_iterator)
-      except StopIteration:
-        data_loader_iterator = iter(train_data)
-        data_item = next(data_loader_iterator)
-        cur_epochs += 1
-        distribute_sampler.set_epoch(cur_epochs)
-      locations = data_item[0].to(device)
-      features = data_item[1].to(device)
-
-      gt_loc = data_item[2].to(device)
-      gt_fea = data_item[3].to(device)
-      gt_pos = gt_loc[:,:3]
-      gt_batch_idx = gt_loc[:,-1:]
-      gt_loc = torch.cat([gt_batch_idx, gt_pos], dim = 1)
-
-      # dec_loc, dec_fea = encoderdecoder(locations, features)
-      output = encoderdecoder(locations, features)
-      # dec_loc = output.C
-      # dec_fea = output.F
-      # losses = (features - dec_fea).square().sum(-1).mean()
-      # visualization 
-      # np.savetxt('input_fea.xyz', features[:,:6].detach().cpu().numpy())
-      # np.savetxt('output_fea.xyz', dec_fea[:,:6].detach().cpu().numpy())
-      # np.savetxt('input_pos.xyz', locations[:,:3].detach().cpu().numpy())
-      # np.savetxt('output_pos.xyz', dec_loc[:,1:].detach().cpu().numpy())
-
-      gt_st = ME.SparseTensor(features=gt_fea, coordinates=gt_loc, coordinate_manager = output.coordinate_manager)
-      
-      fea_diff = (gt_st - output).F
-
-      #output noise
-      # np.savetxt('input_fea.xyz', features[:,:6].detach().cpu().numpy())
-      # np.savetxt('input_gt_fea.xyz', gt_fea[:,:6].detach().cpu().numpy())
-      
-      summary_loss_dict = {}
-      # summary_loss_dict['pos'] = (features - dec_fea)[:,:3].square().sum(-1).mean().detach()
-      summary_loss_dict['pos'] = fea_diff[:,:3].square().sum(-1).mean().detach()
-
-      # losses = (features - dec_fea)[:,:3].square().sum(-1).mean() * w_pos
-      losses = fea_diff[:,:3].square().sum(-1).mean() * w_pos
-      
-      if args.input_normal_signals:
-        # summary_loss_dict['normal'] = (features - dec_fea)[:,3:6].square().sum(-1).mean().detach()
-        summary_loss_dict['normal'] = fea_diff[:,3:6].square().sum(-1).mean().detach()
-
-        losses += fea_diff[:,3:6].square().sum(-1).mean()
-      summary_loss_dict['one'] = fea_diff[:,-1:].square().sum(-1).mean().detach()
-      losses +=  fea_diff[:,-1:].square().sum(-1).mean()
-      summary_loss_dict['total'] = losses.detach()
-      
-      optimizer.zero_grad()
-      losses.backward()
-      optimizer.step()
-      
-      
-      if(running_onCluster and train_iter % 200 == 0):
-        summary_loss_dict_reduced = reduce_dict(summary_loss_dict)
-      elif not running_onCluster:
-        summary_loss_dict_reduced = reduce_dict(summary_loss_dict)
-      if(rank == 0):
-        if(running_onCluster and train_iter % 200 == 0):
-          now = datetime.now()
-          print("{} iteration:{}".format(now, train_iter))
-          print(summary_loss_dict_reduced)
-          train_summary = tf_summary_from_dict(summary_loss_dict_reduced, True)
-          summary_writer.add_summary(tf.compat.v1.Summary(value=train_summary), train_iter)
-        elif not running_onCluster:
-          
-          train_summary = tf_summary_from_dict(summary_loss_dict_reduced, True)
-          summary_writer.add_summary(tf.compat.v1.Summary(value=train_summary), train_iter)
-        if train_iter % 600 == 0:
-          summary_writer.flush()
-
-      # #for testing data
-      flag_val = False
-      if running_onCluster:
-        # if train_iter % 1000 == 0:
-        if train_iter % 1000 == 0:
-        # if train_iter % 10 == 0:
-          flag_val = True
-      else:
-        # if train_iter % 1000 == 0:
-        if train_iter % 10 == 0:
-          flag_val = True
-      if flag_val:
-        # print ("validation!")
-        val_data_sampler.set_epoch(val_epochs)
-        val_epochs += 1
-        #summary_loss owned only by gpu 0
-        # val_summary_loss_dict = get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, val_data, device, 0, summary_loss_dict)
-        val_summary_loss_dict = get_val_summary_dict_backbone(encoderdecoder, val_data, device)
-        
-        val_summary_loss_dict_reduced = reduce_dict(val_summary_loss_dict)
-        if rank == 0:
-          test_summary = tf_summary_from_dict(val_summary_loss_dict_reduced, False) 
-          # test_summary = tf_summary_from_dict(val_summary_loss_dict, False) 
-          # print(test_summary)   
-          summary_writer.add_summary(tf.compat.v1.Summary(value=test_summary), train_iter)
-          # model_evaluation(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, val_data, device, train_iter)
-          summary_writer.flush()
-        
-        if(rank == 0 and train_iter % args.ckpt_interval == 0):
-          #save checkpoint
-          checkpoint_path = os.path.join(checkpoint_dir, "checkpoint_{:06d}.pth".format(train_iter))
-          save_on_master({'model': model_without_ddp.state_dict(),
-                          'optimizer': optimizer.state_dict(),
-                          'lr_scheduler': lr_scheduler.state_dict(),
-                          'epoch': train_iter,
-                          'args': args,
-                      }, checkpoint_path)
-      
-  for name, param in encoderdecoder.named_parameters():
-    if param.grad is None:
-        print("param no grad", name)
-        
-      
-      #print("{}s elapsed for compute gradients and descent".format(t1-t0))
-      # #for testing data
-      
-      #evaluation part
-      # flag_val = False
-      # if running_onCluster:
-      #   if train_iter % 300 == 0:
-      #   # if train_iter % 10 == 0:
-      #     flag_val = True
-      # else:
-      #   if train_iter % 1000 == 0:
-      #     flag_val = True
-      # if flag_val:
-      #   # print ("validation!")
-      #   val_data_sampler.set_epoch(val_epochs)
-      #   val_epochs += 1
-      #   #summary_loss owned only by gpu 0
-      #   val_summary_loss_dict = get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, val_data, device, 0, summary_loss_dict)
-      #   val_summary_loss_dict_reduced = reduce_dict(val_summary_loss_dict)
-      #   if rank == 0:
-      #     test_summary = tf_summary_from_dict(val_summary_loss_dict_reduced, False) 
-      #     # test_summary = tf_summary_from_dict(val_summary_loss_dict, False) 
-      #     # print(test_summary)   
-      #     summary_writer.add_summary(tf.compat.v1.Summary(value=test_summary), train_iter)
-      #     # model_evaluation(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, val_data, device, train_iter)
-      #     summary_writer.flush()
-    # print (prof.table())
-    # prof.export_chrome_trace('./mink_profile.json')
-  if args.aml and rank == 0:
-    if not os.path.exists(log_dir_aml):
-      os.mkdir(log_dir_aml)
-    os.system("cp {} {} -r".format(log_dir, log_dir_aml))
-
-
 
 def pipeline_abc(rank, world_size):
   torch.autograd.set_detect_anomaly(True)
@@ -7591,64 +7008,6 @@ def pipeline_abc(rank, world_size):
   np.random.seed(seed)
   random.seed(seed)
   '''
-  
-  #default parameters:
-  #input_feature_type: global
-  #backbone_feature_encode: false
-  #rotation_augment: false
-  #input normal signal: false
-  if not args.aml:
-    # pretrain_path = '/mnt/sdf1/haog/code/ComplexGenStructure/experiments/518_all_dec12_g4/ckpt/checkpoint_399000.pth' #g4x12 result
-    if args.m == 32:
-      pretrain_path = '/mnt/sdf1/haog/code/ComplexGenStructure/experiments/14_backbone_grid_inputnormal_resnetour_g4_bs6/ckpt/checkpoint_198000.pth' #14 backbone results
-    elif args.m == 64:
-      pretrain_path = '/mnt/sdf1/haog/code/ComplexGenStructure/experiments/random_backbone_grid_inputnormal_resnetour_sc_g4_bs8_m64/ckpt/checkpoint_222000.pth' #14 backbone results
-    elif args.m == 128:
-      pretrain_path = '/mnt/sdf1/haog/code/ComplexGenStructure/experiments/random_backbone_grid_inputnormal_resnetour_sc_g4_bs8_m128/ckpt/checkpoint_369000.pth' #14 backbone results
-
-  else:
-    # pretrain_path = 'experiments/518_all_dec12_g4/ckpt/checkpoint_399000.pth' #g4x12 result
-
-    # pretrain_path = 'experiments/14_backbone_grid_inputnormal_resnetour_g4_bs6/ckpt/checkpoint_198000.pth' #14 rotation result
-    #old version
-    # if args.m == 32:
-    #   if args.num_angles == 56:
-    #     pretrain_path = 'experiments/56_backbone_grid_inputnormal_resnetour_sc_g4_bs6/ckpt/checkpoint_198000.pth' #56 result
-    #   elif args.num_angles == 14:
-    #     pretrain_path = 'experiments/14_backbone_grid_inputnormal_resnetour_g4_bs6/ckpt/checkpoint_198000.pth' #14 rotation result
-    # elif args.m == 64:
-    #   pretrain_path = 'experiments/random_backbone_grid_inputnormal_resnetour_sc_g4_bs8_m64/ckpt/checkpoint_264000.pth' #tmp,
-    # elif args.m == 128:
-    #   pretrain_path = 'experiments/random_backbone_grid_inputnormal_resnetour_sc_g4_bs8_m128/ckpt/checkpoint_369000.pth' #tmp,
-    
-    if args.input_voxel_dim == 128:
-      if args.input_normal_signals:
-        if args.m == 32:
-          pretrain_path = 'experiments/random_backbone_grid_inputnormal_resnetour_sc_g4_bs8_perpatch/ckpt/checkpoint_300000.pth' #tmp,
-        elif args.m == 64:
-          pretrain_path = 'experiments/random_backbone_grid_inputnormal_resnetour_sc_g4_bs8_perpatch_m64/ckpt/checkpoint_300000.pth' #tmp,
-        elif args.m == 128:
-          pretrain_path = 'experiments/random_backbone_grid_inputnormal_resnetour_sc_g4_bs8_perpatch_m128/ckpt/checkpoint_300000.pth' #tmp,
-      else:
-        if args.m == 32:
-          pretrain_path = 'experiments/random_backbone_grid_resnetour_sc_g4_bs8_perpatch/ckpt/checkpoint_300000.pth' #tmp,
-        elif args.m == 64:
-          pretrain_path = 'experiments/random_backbone_grid_resnetour_sc_g4_bs8_perpatch_m64/ckpt/checkpoint_300000.pth' #tmp,
-        elif args.m == 128:
-          pretrain_path = 'experiments/random_backbone_grid_resnetour_sc_g4_bs8_perpatch_m128/ckpt/checkpoint_300000.pth' #tmp,
-    else:
-      if args.input_normal_signals:
-        if args.m == 32:
-          pretrain_path = 'experiments/random_backbone_grid_inputnormal_resnetour_sc_g4_bs8_perpatch_m32_input256/ckpt/checkpoint_249000.pth' #tmp,
-        elif args.m == 64:
-          pretrain_path = 'experiments/random_backbone_grid_inputnormal_resnetour_sc_g8_bs8_perpatch_m64_input256/ckpt/checkpoint_249000.pth' #tmp,
-      else:
-        if args.m == 32:
-          pretrain_path = 'experiments/random_backbone_grid_resnetour_sc_g4_bs8_perpatch_m32_input256/ckpt/checkpoint_249000.pth' #tmp,
-        elif args.m == 64:
-          pretrain_path = 'experiments/random_backbone_grid_resnetour_sc_g8_bs8_perpatch_m64_input256/ckpt/checkpoint_249000.pth' #tmp,
-      
-        
 
   if not args.aml:
     if args.quicktest:
@@ -7755,18 +7114,8 @@ def pipeline_abc(rank, world_size):
   if(rank == 0):
     print("Try to restore from checkpoint")
   
-  if args.pretrain:
-    #using backbone pretrained model
-    print ("using pretrained model")
-    assert(os.path.exists(pretrain_path))
-    checkpoint = torch.load(pretrain_path, map_location='cpu')
-    state_dict = checkpoint['model']
-    for k in list(state_dict.keys()):
-      if not k.startswith('backbone'):
-        del state_dict[k]
-    model_without_ddp.load_state_dict(state_dict, strict=False)
 
-  elif(args.checkpoint_path is not None):
+  if(args.checkpoint_path is not None):
     if(os.path.exists(args.checkpoint_path)):
       print("resume training using {}".format(args.checkpoint_path))
       checkpoint = torch.load(args.checkpoint_path, map_location='cpu')
@@ -8286,28 +7635,10 @@ def pipeline_abc(rank, world_size):
     os.system("cp {} {} -r".format(log_dir, log_dir_aml))
 
 if __name__ == '__main__':
-  # if (args.evalfile):
-  #   eval_files()
-  # elif(args.eval):
-  if args.pretrain_backbone:
-    if not args.eval:
-      mp.spawn(pretrain_backbone,
+  if args.evalfinal or args.evaltopo or args.eval:
+    eval_pipeline()
+  else:
+    mp.spawn(pipeline_abc,
           args=(num_of_gpus,),
           nprocs=num_of_gpus,
           join=True)
-    else:
-      eval_backbone()
-  else:
-    if args.evalfinal or args.evaltopo or args.eval:
-      eval_pipeline()
-    else:
-      mp.spawn(pipeline_abc,
-            args=(num_of_gpus,),
-            nprocs=num_of_gpus,
-            join=True)
-      # pipeline_abc(0,1)
-  
-  # mp.spawn(pipeline_abc,
-  #         args=(num_of_gpus,),
-  #         nprocs=num_of_gpus,
-  #         join=True)
