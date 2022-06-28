@@ -23,7 +23,7 @@ Extensive tests on large scale CAD datasets demonstrate that the modeling of B-R
 The pipeline contains 3 main phases, we will show how to run the code for each phase, and provide the corresponding checkpoint/data.
 
 ## Data downloading
-We provide the pre-processed ABC dataset here (to do). You can find the details of pre-processing pipelines in the [supplemental material](https://haopan.github.io/data/ComplexGen_supplemental.zip) of our paper.
+We provide the pre-processed ABC dataset used for training and evaluating ComplexNet here (to do). You can find the details of pre-processing pipelines in the [supplemental material](https://haopan.github.io/data/ComplexGen_supplemental.zip) of our paper.
 
 The data contains surface points along with normals, and its ground truth B-Rep labels. After extracting the zip file under root directory, the data should be organized as the following structure:
 ```
@@ -47,6 +47,8 @@ ComplexGen
 ```
 
 <!-- Here _noise_002_ and _noise_005_ means noisy point clouds with normal-distribution-perturbation of mean value _0.02_ and _0.05_ respectively. -->
+
+You can also find the final output of ComplexGen here (todo).
 
 ## Phase 1: ComplexNet prediction
 
