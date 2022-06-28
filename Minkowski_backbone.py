@@ -6589,128 +6589,22 @@ def eval_pipeline(flag_eval = True):
   random.seed(seed)
   '''
   
-  #not considering rotation augmentation
-  # train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, data_folder="/mnt/data/shilin/detr/ABC/test", with_distribute_sampler=False)
-  # train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, data_folder="test_data_tmp", with_distribute_sampler=False)
   if args.quicktest:
     # train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="train_small",  with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise)#data_folder="/mnt/data/shilin/detr/ABC/train",
-    train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="train_small",  with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)#data_folder="/mnt/data/shilin/detr/ABC/train",
+    train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="data/train_small",  with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)#data_folder="/mnt/data/shilin/detr/ABC/train",
   else:
-    # train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="val_tmp", with_distribute_sampler=False, flag_quick_test=args.quicktest)#data_folder="/mnt/data/shilin/detr/ABC/test",
-    # train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="/mnt/sdf1/haog/data/train_new", with_distribute_sampler=False, flag_quick_test=args.quicktest)#data_folder="/mnt/data/shilin/detr/ABC/test",
-    vis_train_folder = "vis_train"
-    vis_test_folder = "vis_test"
-    test_folder = "/mnt/sdf1/haog/data/test_new"
-    train_folder = "/mnt/sdf1/haog/data/train_new"
     if args.parsenet:
-      # vis_train_folder = "vis_train_parsenet"
-      # vis_train_folder = "vis_tmp"
-      # vis_test_folder = "vis_test_parsenet"
-
-      #train
-      # vis_train_folder = "vis_train_perpatch"
-      # vis_test_folder = "vis_test_perpatch"
-      # vis_test_folder = "vis_test_tmp"
-
-
-      vis_train_folder = "vis_train_perpatch_1120"
-      vis_test_folder = "vis_test_perpatch_1120"
-      # vis_test_folder = "vis_tmp"
-
-      #partial
-      # vis_test_folder = "partial_data_vis_test"
-      # vis_test_folder = "vis_test_tmp"
-      # vis_test_folder = "vis_test_perpatch_tmp"
-      # test_folder = "/mnt/sdf1/haog/data/data_parsenet_perpatch_test"
-
-      # test_folder = "/mnt/sdf1/haog/data/data_parsenet_perpatch_test_1120"
-
-      # test_folder = "/mnt/sdf1/haog/data/tmp"
-
-      # test_folder = "/mnt/sdf1/haog/data/data_parsenet_perpatch_train_partial"
-
-      # test_folder = "/mnt/sdf1/haog/data/val_perpatch_900_partial"
-      # test_folder = "/mnt/sdf1/haog/data/val_perpatch_900_1120"
-      base_folder = "/mnt/sdf1/haog/data"
-      if args.wsa:
-        base_folder = "/D_data/haog/complexgen/data/test_data"
-        # base_folder = "/D_data/haog/complexgen/data/test_data"
-
-      # test_folder = "/mnt/sdf1/haog/data/data_parsenet_perpatch_test_1120"
-
-      #ori version
-      test_folder = os.path.join(base_folder, "data_parsenet_perpatch_test_1120")
-
-      # test_folder = os.path.join(base_folder, "fusion360")
-      # test_folder = os.path.join(base_folder, "globfit")
-      # test_folder = os.path.join(base_folder, "1558")
-      # test_folder = os.path.join(base_folder, "cube_rot")
-      # test_folder = os.path.join(base_folder, "cube")
-      # test_folder = os.path.join(base_folder, "realscan")
-      # test_folder = os.path.join(base_folder, "union")
-      # test_folder = os.path.join(base_folder, "aimshape_poisson")
-
-
-
-
-
-      # test_folder = os.path.join(base_folder, "fandisk")
-
-
-
-      # test_folder = os.path.join(base_folder, "tmp0127")
-
-
-      if args.evalrest:
-        # test_folder = "/mnt/sdf1/haog/data/val_perpatch_900_rest_1120"
-        test_folder = os.path.join(base_folder, "val_perpatch_900_rest_1120")
-        # test_folder = "/mnt/sdf1/haog/data/tmp"
-      # test_folder = "/mnt/sdf1/haog/data/tmp1223"
-      # test_folder = "/mnt/sdf1/haog/data/tmp1224"
-      # test_folder = "/mnt/sdf1/haog/data/val_perpatch_900_rest_1120"
-      # test_folder = "tmp_small"
-      # test_folder = "/mnt/sdf1/haog/data/data_parsenet_perpatch_train_1120"
-      # test_folder = "/mnt/sdf1/haog/data/val_perpatch_900"
-
-      #part version
-      if args.part >= 0:
-        # test_folder = "/mnt/sdf1/haog/data/data_parsenet_perpatch_test_1120_part{}".format(args.part)
-        test_folder = os.path.join(base_folder, "data_parsenet_perpatch_test_1120_part{}".format(args.part))
+      vis_test_folder = "data/vis_test"
+      base_folder = "data"
+      test_folder = os.path.join(base_folder, "default/test")
 
       if args.partial:
-        # test_folder = "/mnt/sdf1/haog/data/data_parsenet_perpatch_test_partial/partial"
-        test_folder = os.path.join(base_folder, "data_parsenet_perpatch_test_partial/partial")
+        test_folder = os.path.join(base_folder, "partial/test")
 
-      # test_folder = os.path.join(base_folder, "aimshape")
-
-      # test_folder = os.path.join(base_folder, "aimshape_poisson")
-      test_folder = os.path.join(base_folder, "shapenet_camera1")
-      # test_folder = os.path.join(base_folder, "shapenet_other")
-      # test_folder = os.path.join(base_folder, "union_partial_poisson")
-
-
-
-      #old version
-      # vis_train_folder = "vis_train_parsenet"
-      # vis_test_folder = "vis_test_parsenet"
-      # test_folder = "/mnt/sdf1/haog/data/data_parsenet_fix_test"
-
-      # test_folder = "/mnt/sdf1/haog/data/val_fix_900"
-
-      # test_folder = "/mnt/sdf1/haog/data/data_parsenet_perpatch_test"
-      # train_folder = "/mnt/sdf1/haog/data/data_parsenet_fix_train_1120"
-
-      
-    
-    if args.vis_train:
-      train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder=vis_train_folder, with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)#data_folder="/mnt/data/shilin/detr/ABC/test",
-    elif args.vis_test:
+    if args.vis_test:
       train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder=vis_test_folder, with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)#data_folder="/mnt/data/shilin/detr/ABC/test",
-    elif args.eval_train:
-      train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder=train_folder, with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)#data_folder="/mnt/data/shilin/detr/ABC/test", 
     else:
       train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder=test_folder, with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)#data_folder="/mnt/data/shilin/detr/ABC/test",
-      # train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="/mnt/sdf1/haog/data/train_small", with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise)#data_folder="/mnt/data/shilin/detr/ABC/test",
       
 
   device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -6996,35 +6890,22 @@ def pipeline_abc(rank, world_size):
     if args.quicktest:
       train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer) #
 
-
       #ori version
       val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False, flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
-
-      #modified version on 1012
-      # val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/val_fix_900", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv)#data_folder="/mnt/data/shilin/detr/ABC/train",
-
     else:
-      #distrubted sampler only used for set epoches
-      if not args.data_medium:
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/train_new", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise) #"/mnt/data/shilin/detr/ABC/train"
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/train_new_aug", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest) #"/mnt/data/shilin/detr/ABC/train"
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/train_new_50k", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest) #"/mnt/data/shilin/detr/ABC/train"
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/data_parsenet_train_oripkl", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest) #"/mnt/data/shilin/detr/ABC/train"
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/data_parsenet_fix_train", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_grid = args.patch_grid, num_angle = args.num_angles) #"/mnt/data/shilin/detr/ABC/train"
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/tmp", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_grid = args.patch_grid, num_angle = args.num_angles) #"/mnt/data/shilin/detr/ABC/train"
-        # train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/data_parsenet_perpatch_train", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer) #"/mnt/data/shilin/detr/ABC/train"
-
-        train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/data_parsenet_perpatch_train_partial", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer) #"/mnt/data/shilin/detr/ABC/train"
-
-        
-
-      else:
-        train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/train_medium", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer) #"/mnt/data/shilin/detr/ABC/train"
+      if args.parsenet:
+        if not args.partial:
+          train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/default/train", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer) #
+        else:
+          train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/partial/train", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer) #
       if not args.patch_grid:
-        val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/val_new", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
+        val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="val_new_64", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
       else:
-        # val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/val_fix_64", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv)#data_folder="/mnt/data/shilin/detr/ABC/train",
-        val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="/mnt/sdf1/haog/data/val_perpatch_900", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
+        if not args.partial:
+          val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/default/val", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
+        else:
+          val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/partial/val", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
+
   
   torch.cuda.set_device(rank)
   device = 'cuda:{}'.format(rank) if torch.cuda.is_available() else 'cpu'
