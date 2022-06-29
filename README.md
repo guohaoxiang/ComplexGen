@@ -23,7 +23,7 @@ Extensive tests on large scale CAD datasets demonstrate that the modeling of B-R
 The pipeline contains 3 main phases, we will show how to run the code for each phase, and provide the corresponding checkpoint/data.
 
 ## Data downloading
-We provide the pre-processed ABC dataset used for training and evaluating ComplexNet [here](https://pan.baidu.com/s/1PStVn2h_kkKtYsc-LYF7sQ?pwd=asdf). You can find the details of pre-processing pipelines in the [supplemental material](https://haopan.github.io/data/ComplexGen_supplemental.zip) of our paper.
+We provide the pre-processed ABC dataset used for training and evaluating ComplexNet [here](https://pan.baidu.com/s/1PStVn2h_kkKtYsc-LYF7sQ?pwd=asdf), which can be extracted by [7-Zip](https://www.7-zip.org/). You can find the details of pre-processing pipelines in the [supplemental material](https://haopan.github.io/data/ComplexGen_supplemental.zip) of our paper.
 
 The data contains surface points along with normals, and its ground truth B-Rep labels. After extracting the zip file under root directory, the data should be organized as the following structure:
 ```
