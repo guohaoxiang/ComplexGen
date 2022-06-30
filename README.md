@@ -48,7 +48,15 @@ ComplexGen
 
 <!-- Here _noise_002_ and _noise_005_ means noisy point clouds with normal-distribution-perturbation of mean value _0.02_ and _0.05_ respectively. -->
 
-You can also find the final output of ComplexGen here (todo).
+**\[Optional\]** You can also find the output of each phase [here](https://pan.baidu.com/s/1vO0nTSBbCw52EWUDZI7X4g?pwd=asdf). For each test model, there will be 4 or 5 outputs:
+```
+*_input.ply: Input point cloud
+*_prediction.pkl: Output of 'ComplexNet prediction' phase
+*_prediction.complex: Visualizable file for *_prediction.pkl, elements with valid probability larger than 0.3 are kept.
+*_extraction.complex: Output of 'complex extraction' phase
+*__geom_refine.json: Output of 'geometric refinement' phase, which is also the final output.
+```
+The description and visualization of each file type can be found in [pickle description](), [complex description]() and [json description](). If you want to directly evaluate the provided output data of ComplexGen, please put the extracted _experiments_ folder under root folder _ComplexGen_, and conduct [Environment setup](https://github.com/guohaoxiang/ComplexGen/edit/main/README.md#phase-1-complexnet-prediction) and [Evaluation](https://github.com/guohaoxiang/ComplexGen/edit/main/README.md#phase-1-complexnet-prediction)
 
 ## Phase 1: ComplexNet prediction
 
@@ -68,7 +76,7 @@ This command will start the training of ComplexNet on a small dataset with 64 CA
 
 ### Testing
 
-To test the trained ComplexNet, please first download the trained weights used in our paper here(to do), and unzip it under the root directory:
+To test the trained ComplexNet, please first download the trained weights used in our paper [here](https://pan.baidu.com/s/1fvwURG1FWjazvQpVVASwMg?pwd=asdf), and unzip it under the root directory:
 
 ```
 ComplexGen
@@ -95,7 +103,7 @@ You can also get the visualizable models of corner/curve/patch of some test data
 
 A set of 3D models will be generated under _ComplexGen/experiments/default/vis_test/_ which can be visualized using 3D softwares like [MeshLab](https://www.meshlab.net/).
 
-We also provided the forwarded pickle file here (todo). If you want to use it, please download and unzip it under the root directory.
+<!-- We also provided the forwarded pickle file here (todo). If you want to use it, please download and unzip it under the root directory. -->
 
 ### Training
 
@@ -122,6 +130,8 @@ license
 ### Environment setup
 
 libigl
+
+## Evaluation
 
 ## Test on your own point cloud
 If you want to use our trained model to test on your own point cloud, please follow these steps:
