@@ -6628,8 +6628,8 @@ def eval_pipeline(flag_eval = True):
   lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, args.lr_drop)
   
   log_dir, obj_dir, checkpoint_dir = prepare_experiment_folders(args.experiment_name)
-  if(os.path.exists("experiments/default.mtl") and not os.path.exists(os.path.join(obj_dir, "default.mtl"))):
-    os.system("cp experiments/default.mtl {}".format(obj_dir))
+  if(os.path.exists("default.mtl") and not os.path.exists(os.path.join(obj_dir, "default.mtl"))):
+    os.system("cp default.mtl {}".format(obj_dir))
 
   experiment_dir = os.path.join("experiments", args.experiment_name)
 
@@ -6648,8 +6648,8 @@ def eval_pipeline(flag_eval = True):
 
   testobj_dir = os.path.join(experiment_dir, test_folder)
   if(not os.path.exists(testobj_dir)): os.mkdir(testobj_dir)
-  if(os.path.exists("experiments/default.mtl") and not os.path.exists(os.path.join(testobj_dir, "default.mtl"))):
-    os.system("cp experiments/default.mtl {}".format(testobj_dir))
+  if(os.path.exists("default.mtl") and not os.path.exists(os.path.join(testobj_dir, "default.mtl"))):
+    os.system("cp default.mtl {}".format(testobj_dir))
   
   start_iterations = 0
   print("Try to restore from checkpoint")
@@ -6935,8 +6935,8 @@ def pipeline_abc(rank, world_size):
   
   if(rank == 0):
     log_dir, obj_dir, checkpoint_dir = prepare_experiment_folders(args.experiment_name)
-    if(os.path.exists("experiments/default.mtl") and not os.path.exists(os.path.join(obj_dir, "default.mtl"))):
-      os.system("cp experiments/default.mtl {}".format(obj_dir))
+    if(os.path.exists("default.mtl") and not os.path.exists(os.path.join(obj_dir, "default.mtl"))):
+      os.system("cp default.mtl {}".format(obj_dir))
   
   dist.barrier()
   log_dir, obj_dir, checkpoint_dir = prepare_experiment_folders(args.experiment_name)
