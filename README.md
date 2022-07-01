@@ -66,7 +66,7 @@ The description and visualization of each file type can be found in [pickle desc
         $ docker run --runtime=nvidia --ipc=host --net=host -v /path/to/complexgen/:/workspace -t -i pytorch/pytorch:1.6.0-cuda10.1-cudnn7-devel
         $ cd /workspace
         $ apt-get update && apt-get install libopenblas-dev -y && conda install numpy mkl-include pytorch cudatoolkit=10.1 -c pytorch -y && apt-get install git -y && pip install git+https://github.com/NVIDIA/MinkowskiEngine.git@v0.5.0 --user
-        $ cd chamferdist && python setup.py install --user && pip install numba --user && pip install methodtools --user && pip install tensorflow-gpu --user && pip install scipy --user && pip install plyfile --user && pip install trimesh --user && cd ..
+        $ cd chamferdist && python setup.py install --user && pip install numba --user && pip install methodtools --user && pip install tensorflow-gpu --user && pip install scipy --user  && pip install rtree --user && pip install plyfile --user && pip install trimesh --user && cd ..
 
 To test if the environment is set correctly, run:
         
