@@ -56,7 +56,7 @@ ComplexGen
 *_extraction.complex: Output of 'complex extraction' phase
 *__geom_refine.json: Output of 'geometric refinement' phase, which is also the final output.
 ```
-The description and visualization of each file type can be found in [pickle description](), [complex description]() and [json description](). If you want to directly evaluate the provided output data of ComplexGen, please put the extracted _experiments_ folder under root folder _ComplexGen_, and conduct [Environment setup](https://github.com/guohaoxiang/ComplexGen/edit/main/README.md#phase-1-complexnet-prediction) and [Evaluation](https://github.com/guohaoxiang/ComplexGen/edit/main/README.md#phase-1-complexnet-prediction)
+The description and visualization of each file type can be found in [pickle description](docs/network_prediction_pickle_description.md), [complex description](docs/complex_extraction_complex_description.md) and [json description](docs/geometric_refinement_json_description.md). If you want to directly evaluate the provided output data of ComplexGen, please put the extracted _experiments_ folder under root folder _ComplexGen_, and conduct [Environment setup](https://github.com/guohaoxiang/ComplexGen/edit/main/README.md#phase-1-complexnet-prediction) and [Evaluation](https://github.com/guohaoxiang/ComplexGen/edit/main/README.md#phase-1-complexnet-prediction)
 
 ## Phase 1: ComplexNet prediction
 
