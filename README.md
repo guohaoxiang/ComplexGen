@@ -126,7 +126,7 @@ Note that you need also mannully setup [Gurobi license](https://support.gurobi.c
 
 To conduct complex extraction, run:
 
-        $ ./extraction_default.sh
+        $ ./scripts/extraction_default.sh
 
 A set of complex file will be generated under _ComplexGen/experiments/default/test_obj/_. The description and visualization of complex file can be found [here](docs/complex_extraction_complex_description.md). As the average extraction time for each model is 10 minutes, we recommend you to conduct complex extraction on a multi-thread cpu server. To do this, just set _flag\_parallel_ as _True_ and _num\_parallel_ as half of the number of available threads in _ComplexGen/PostProcess/complex\_extraction.py_.
 
