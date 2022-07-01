@@ -144,8 +144,8 @@ To evaluate the final output of ComplexGen, run:
 
 You can find the metrics of each model and all models in _ComplexGen/experiments/default/test_obj/final_evaluation_geom_refine.xlsx_.
 
-## Test on your own point cloud
-If you want to use our trained model to test on your own point cloud, please follow these steps:
+<!-- ## Test on your own point cloud -->
+<!-- If you want to use our trained model to test on your own point cloud, please follow these steps: -->
 
 ## Citation
 
