@@ -70,7 +70,7 @@ The description and visualization of each file type can be found in [pickle desc
 
 To test if the environment is set correctly, run:
         
-        $ python scripts/train_small.sh
+        $ ./scripts/train_small.sh
         
 This command will start the training of ComplexNet on a small dataset with 64 CAD models.
 
@@ -93,13 +93,13 @@ ComplexGen
 
 Then run:
 
-        $ python scripts/test_default.sh
+        $ ./scripts/test_default.sh
 
-You can find the evaluation table (test_statistics.xlsx) and network prediction of each model (\*.pkl) under _ComplexGen/experiments/default/test_obj/_. The description of each pickle file (\*.pkl) can be found [here](docs/network_prediction_pickle_description.md). 
+You can find network prediction of each model (\*.pkl) under _ComplexGen/experiments/default/test_obj/_. The description of each pickle file (\*.pkl) can be found [here](docs/network_prediction_pickle_description.md). 
 
 You can also get the visualizable models of corner/curve/patch of some test data by running: 
 
-        $ python scripts/test_default_vis.sh
+        $ ./scripts/test_default_vis.sh
 
 A set of 3D models will be generated under _ComplexGen/experiments/default/vis_test/_ which can be visualized using 3D softwares like [MeshLab](https://www.meshlab.net/).
 
@@ -109,7 +109,7 @@ A set of 3D models will be generated under _ComplexGen/experiments/default/vis_t
 
 If you want to train ComplexNet from scratch, run:
 
-        $ python scripts/train_default.sh
+        $ ./scripts/train_default.sh
 
 By default, the ComplexNet is trained on a server with 8 V100 GPUs.
 You can change the numder of GPUs by setting the _--gpu_ flag in scripts/train_default, and change batch size by setting the _batch_size_ flag.
@@ -120,10 +120,15 @@ The training takes about 3 days to converge.
 
 ### Environment setup
 
-gurobi
+        $ pip install gurobipy==9.1.2 && pip install Mosek && pip install sklearn
 
-license
+Note that you need also mannully setup [Gurobi license](https://support.gurobi.com/hc/en-us/articles/360059842732).
 
+To conduct complex extraction, run:
+
+        $ ./extraction_default.sh
+
+A set of complex file will be generated under _ComplexGen/experiments/default/test_obj/_. The description and visualization of complex file can be found [here](docs/complex_extraction_complex_description.md). As the average extraction time for each model is 10 minutes, we recommend you to conduct complex extraction on a multi-thread cpu server. To do this, just set _flag\_parallel_ as _True_ and _num\_parallel_ as half of the number of available threads in _ComplexGen/PostProcess/complex\_extraction.py_.
 
 ## Phase 3: Geometric refinement
 
@@ -132,6 +137,12 @@ license
 libigl
 
 ## Evaluation
+
+To evaluate the final output of ComplexGen, run:
+
+        $ ./scripts/eval_default.sh
+
+You can find the metrics of each model and all models in _ComplexGen/experiments/default/test_obj/final_evaluation_geom_refine.xlsx_.
 
 ## Test on your own point cloud
 If you want to use our trained model to test on your own point cloud, please follow these steps:
