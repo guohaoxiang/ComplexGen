@@ -5647,7 +5647,7 @@ def model_evaluation_yaml(model_shape, corner_loss_criterion, curve_loss_criteri
       summary_loss_dict = pickle.load(f)
       # if (len(summary_loss_dict) != 42):
       #   print('summary_loss_dict: ')
-      assert(len(summary_loss_dict) == 42)
+      # assert(len(summary_loss_dict) == 42)
       test_statistics.append(list(summary_loss_dict.values()))
       # sample_id.append(cur_id)
       sample_name_list.append(cur_id)
