@@ -1,0 +1,3 @@
+[submodule "GeometricRefine/yaml-cpp"]
+	path = GeometricRefine/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp
