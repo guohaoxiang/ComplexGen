@@ -24,7 +24,7 @@
 *.lai
 *.la
 *.a
-*.lib
+# *.lib
 
 # Executables
 *.exe
@@ -34,3 +34,7 @@
 # Data
 *.pkl
 *.pkl
+
+GeometricRefine/build/
+GeometricRefine/Bin/
+GeometricRefine/Lib/
