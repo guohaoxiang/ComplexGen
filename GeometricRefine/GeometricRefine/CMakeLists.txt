@@ -27,12 +27,13 @@ LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/Lib)
 LINK_DIRECTORIES(${CMAKE_SOURCE_DIR}/allquadricsdirect/lib/CLAPACK/lib_64)
 
 FILE(GLOB_RECURSE project_cpps src/HOptimizer/*.cpp src/CurveFitter.cpp src/SurfFitter.cpp src/Helper.cpp src/main.cpp src/Helper.h src/SurfFitter.h src/CurveFitter.h src/MyPointCloud.h src/KD_Tree.h src/NURBSFitting.h src/NURBSFittingWrapper.h src/NURBSFittingWrapper.cpp src/HOptimizer src/Mesh3D.h src/Mesh3D.cpp)
-INCLUDE_DIRECTORIES(src src/HOptimizer src/yaml-cpp)
+INCLUDE_DIRECTORIES(src src/HOptimizer ${CMAKE_SOURCE_DIR}/yaml-cpp ${CMAKE_SOURCE_DIR}/yaml-cpp/include)
 
 set(CMAKE_DEBUG_POSTFIX "d")
 add_definitions(/bigobj)
 add_executable(GeometricRefine ${project_cpps})
 # target_link_libraries(GeometricRefine PRIVATE debug allquadricsdirectd debug yaml-cppd optimized allquadricsdirect optimized yaml-cpp legacy_stdio_definitions)
 target_link_libraries(GeometricRefine PUBLIC debug allquadricsdirectd debug yaml-cppd optimized allquadricsdirect optimized yaml-cpp legacy_stdio_definitions)
+target_link_libraries(GeometricRefine PUBLIC debug libf2cd debug clapackd debug BLASd optimized libf2c optimized clapack optimized BLAS)
 
 
