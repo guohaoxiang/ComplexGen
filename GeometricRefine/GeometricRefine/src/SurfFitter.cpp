@@ -2,6 +2,7 @@
 #include <fstream>
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
+#include <math.h>
 #include"SurfFitter.h"
 
 #include "Mathematics/ApprCylinder3.h"

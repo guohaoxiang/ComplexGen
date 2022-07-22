@@ -1,4 +1,5 @@
 #include <iostream>
+#include <math.h>
 #include "CurveFitter.h"
 #include "Mathematics/ApprOrthogonalLine3.h"
 #include "Mathematics/ApprCircle2.h"
