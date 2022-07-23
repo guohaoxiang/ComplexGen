@@ -132,7 +132,7 @@ A set of complex file will be generated under _ComplexGen/experiments/default/te
 
 ## Phase 3: Geometric refinement
 
-Code of this phase can be compiled only under Windows, as I fail to build and link [clapack](https://netlib.org/clapack/) with our project under Linux. Sorry for the inconvenience :-(
+Code of this phase can be compiled only under Windows, as I fail to compile and link [clapack](https://netlib.org/clapack/) with our project under Linux. Sorry for the inconvenience :-(
 
 ### Environment setup
 libigl and Eigen are needed, you can install them via [vcpkg](https://github.com/microsoft/vcpkg)
@@ -150,10 +150,13 @@ The C++ project can be generated with CMake:
 
 Then you can build _GeometricRefine.sln_ with Visual Studio. After that, you'll find _GeometricRefine.exe_ under _PATH_TO_COMPLEXGEN/GeometricRefine/Bin_.
 
-To conduct geometric refinement for all models, please first modify..  then run:
+To conduct geometric refinement for all models, please first modify _.\scripts\geometric_refine.py_ by setting 'pc_ply_path' as the path containing the input point cloud stored in _.ply_ format, and setting 'complex_path' as the path containing the results of complex extraction, then run:
 
         $ cd PATH_TO_COMPLEXGEN
-        $ python .\script\geometric_refine_default.py
+        $ python .\scripts\geometric_refine.py
+
+If you are processing noisy/partial data, please replace the second command with:
+        $ python .\scripts\geometric_refine.py --noise
 
 You will find ...
 
