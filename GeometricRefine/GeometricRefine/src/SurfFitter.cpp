@@ -14,11 +14,8 @@
 
 #define TH_POS 1e-5
 
-//using namespace Eigen;
 
 using namespace gte;
-//using gte::Vector3;
-//aqd part
 #include "quadricfitting.h"
 
 using allquadrics::data_pnw;
@@ -53,64 +50,9 @@ void SurfFitter::expand_input_points(double dist, double expand_weight)
 	expand_grid_points(input_pts, dim_u_input, dim_v_input, dist, u_closed, input_pts_new);
 	input_pts = input_pts_new;
 
-	/*std::vector<vec3d> u_neg(dim_u_input), u_pos(dim_u_input);
-	for (size_t i = 0; i < dim_u_input; i++)
-	{
-		vec3d dir_neg = input_pts[i * dim_v_input] - input_pts[i * dim_v_input + 1];
-		dir_neg.Normalize();
-		u_neg[i] = input_pts[i * dim_v_input] + dist * dir_neg;
-		vec3d dir_pos = input_pts[i * dim_v_input + dim_v_input - 1] - input_pts[i * dim_v_input + dim_v_input - 2];
-		dir_pos.Normalize();
-		u_pos[i] = input_pts[i * dim_v_input + dim_v_input - 1] + dir_pos * dist;
-	}*/
 
 	if (!u_closed)
 	{
-		//std::vector<vec3d> v_neg(dim_v_input), v_pos(dim_v_input);
-		//for (size_t i = 0; i < dim_v_input; i++)
-		//{
-		//	vec3d dir_neg = input_pts[i] - input_pts[i + dim_v_input];
-		//	dir_neg.Normalize();
-		//	v_neg[i] = input_pts[i] + dist * dir_neg;
-		//	vec3d dir_pos = input_pts[(dim_u_input - 1) * dim_v_input + i] - input_pts[(dim_u_input - 2) * dim_v_input + i];
-		//	dir_pos.Normalize();
-		//	v_pos[i] = input_pts[(dim_u_input - 1) * dim_v_input + i] + dist * dir_pos;
-		//}
-		//
-		////four corners
-		//vec3d v_neg_neg, v_neg_pos, v_pos_neg, v_pos_pos;
-		//vec3d dir_neg = v_neg[0] - v_neg[1];
-		//dir_neg.Normalize();
-		//v_neg_neg = v_neg[0] + dist * dir_neg;
-		//vec3d dir_pos = v_neg[dim_v_input - 1] - v_neg[dim_v_input - 2];
-		//dir_pos.Normalize();
-		//v_neg_pos = v_neg[dim_v_input - 1] + dist * dir_pos;
-		//
-		//dir_neg = v_pos[0] - v_pos[1];
-		//dir_neg.Normalize();
-		//v_pos_neg = v_pos[0] + dist * dir_neg;
-		//dir_pos = v_pos[dim_v_input - 1] - v_pos[dim_v_input - 2];
-		//dir_pos.Normalize();
-		//v_pos_pos = v_pos[dim_v_input - 1] + dist * dir_pos;
-
-		//std::vector<vec3d> input_pts_new;
-		//input_pts_new.push_back(v_neg_neg);
-		//input_pts_new.insert(input_pts_new.end(), v_neg.begin(), v_neg.end());
-		//input_pts_new.push_back(v_neg_pos);
-		//for (size_t i = 0; i < dim_u_input; i++)
-		//{
-		//	input_pts_new.push_back(u_neg[i]);
-		//	for (size_t j = 0; j < dim_v_input; j++)
-		//	{
-		//		input_pts_new.push_back(input_pts[i * dim_v_input + j]);
-		//	}
-		//	input_pts_new.push_back(u_pos[i]);
-		//}
-		//input_pts_new.push_back(v_pos_neg);
-		//input_pts_new.insert(input_pts_new.end(), v_pos.begin(), v_pos.end());
-		//input_pts_new.push_back(v_pos_pos);
-		//
-		//input_pts = input_pts_new;
 		if (!input_pts_weight.empty())
 		{
 			std::vector<double> input_pts_weight_new;
@@ -143,20 +85,6 @@ void SurfFitter::expand_input_points(double dist, double expand_weight)
 	}
 	else
 	{
-		/*input_pts.insert(input_pts.begin(), u_neg.begin(), u_neg.end());
-		input_pts.insert(input_pts.end(), u_pos.begin(), u_pos.end());*/
-		/*std::vector<vec3d> input_pts_new;
-		for (size_t i = 0; i < dim_u_input; i++)
-		{
-			input_pts_new.push_back(u_neg[i]);
-			for (size_t j = 0; j < dim_v_input; j++)
-			{
-				input_pts_new.push_back(input_pts[i * dim_v_input + j]);
-			}
-			input_pts_new.push_back(u_pos[i]);
-		}
-		input_pts = input_pts_new;*/
-
 		if (!input_pts_weight.empty())
 		{
 			std::vector<double> input_pts_weight_new;
@@ -181,8 +109,6 @@ void SurfFitter::expand_input_points(double dist, double expand_weight)
 void SurfFitter::subdivide_grid(int split)
 {
 	std::vector<vec3d> input_pts_usplit, input_pts_vsplit;
-	//update dim_u_input, dim_v_input
-	//int dim_u_input_ori = dim_u_input, dim_v_input_ori = dim_v_input;
 	std::vector<double> weights_usplit, weights_vsplit;
 	for (size_t i = 0; i < dim_u_input - 1; i++)
 	{
@@ -255,7 +181,6 @@ void SurfFitter::subdivide_grid(int split)
 
 		dim_u_input = (dim_u_input - 1) * split + 1;
 	}
-	//input_pts = input_pts_usplit;
 
 	//v_part
 	for (size_t i = 0; i < dim_u_input; i++)
@@ -298,8 +223,6 @@ void SurfFitter::get_nn_proj_pt(const vec3d& src, vec3d& tgt)
 {
 	assert(projection_pts.size() != 0);
 	//find nn pts of src from projection_pts
-	//tgt.clear();
-	//for (size_t i = 0; i < src.size(); i++)
 	{
 		double min_dist = -1.0;
 		size_t min_id = -1;
@@ -313,7 +236,6 @@ void SurfFitter::get_nn_proj_pt(const vec3d& src, vec3d& tgt)
 			}
 		}
 		assert(min_dist > -0.5);
-		//tgt.push_back(projection_pts[min_id]);
 		tgt = projection_pts[min_id];
 	}
 }
@@ -403,7 +325,6 @@ void SurfFitter::get_grid_tri(std::vector<vec3d>& pts, std::vector<std::vector<s
 	{
 		for (size_t k = 0; k < v_split - 1; k++)
 		{
-			//faces.push_back(std::vector<size_t>({ counter + j * v_split + k, counter + (j + 1) * v_split + k, counter + (j + 1) * v_split + k + 1, counter + j * v_split + k + 1 }));
 			faces.push_back(std::vector<size_t>({ counter + j * v_split + k, counter + (j + 1) * v_split + k, counter + (j + 1) * v_split + k + 1 }));
 			faces.push_back(std::vector<size_t>({ counter + j * v_split + k, counter + (j + 1) * v_split + k + 1, counter + j * v_split + k + 1 }));
 
@@ -414,7 +335,6 @@ void SurfFitter::get_grid_tri(std::vector<vec3d>& pts, std::vector<std::vector<s
 	{
 		for (size_t j = 0; j < v_split - 1; j++)
 		{
-			//faces.push_back(std::vector<size_t>({ counter + (u_split - 1) * v_split + j, counter + j, counter + j + 1, counter + (u_split - 1) * v_split + j + 1 }));
 			faces.push_back(std::vector<size_t>({ counter + (u_split - 1) * v_split + j, counter + j, counter + j + 1 }));
 			faces.push_back(std::vector<size_t>({ counter + (u_split - 1) * v_split + j,  counter + j + 1, counter + (u_split - 1) * v_split + j + 1 }));
 		}
@@ -424,7 +344,6 @@ void SurfFitter::get_grid_tri(std::vector<vec3d>& pts, std::vector<std::vector<s
 	{
 		for (size_t j = 0; j < u_split - 1; j++)
 		{
-			//faces.push_back(std::vector<size_t>({ counter + j * v_split + v_split - 1, counter + (j + 1) * v_split + v_split - 1, counter + (j + 1) * v_split, counter + j * v_split }));
 			faces.push_back(std::vector<size_t>({ counter + j * v_split + v_split - 1, counter + (j + 1) * v_split + v_split - 1, counter + (j + 1) * v_split }));
 			faces.push_back(std::vector<size_t>({ counter + j * v_split + v_split - 1, counter + (j + 1) * v_split, counter + j * v_split }));
 		}
@@ -432,7 +351,6 @@ void SurfFitter::get_grid_tri(std::vector<vec3d>& pts, std::vector<std::vector<s
 
 	if (u_closed && v_closed)
 	{
-		//faces.push_back(std::vector<size_t>({ counter, counter + (u_split - 1) * v_split, counter + u_split * v_split - 1, counter + v_split - 1 }));
 		faces.push_back(std::vector<size_t>({ counter, counter + (u_split - 1) * v_split, counter + u_split * v_split - 1 }));
 		faces.push_back(std::vector<size_t>({ counter, counter + u_split * v_split - 1, counter + v_split - 1 }));
 	}
@@ -456,10 +374,8 @@ void SurfFitter::save_input_patch_obj(const std::string& fn)
 
 	for (int i = 0; i < dim_u_input; i++)
 	{
-		//double du = u_min + i * (u_max - u_min) / denom_u;
 		for (int j = 0; j < dim_v_input; j++)
 		{
-			//double dv = v_min + j * (v_max - v_min) / denom_v;
 			out << "v " << input_pts[i * dim_v_input + j] << std::endl;
 		}
 	}
@@ -631,9 +547,6 @@ void CylinderFitter::aqd_fitting()
 	//not scaled and centered yet
 	allquadrics::Quadric circularCylinder;
 	fitCircularCylinder(datapts, circularCylinder);
-	/*cout << "cylinder para: " << endl;
-	outputQuadric(circularCylinder);
-	cout << endl;*/
 
 	Eigen::Matrix3d A;
 	A(0, 0) = circularCylinder.q[4];
@@ -643,11 +556,7 @@ void CylinderFitter::aqd_fitting()
 	A(1, 2) = A(2, 1) = circularCylinder.q[8] * 0.5;
 	A(2, 2) = circularCylinder.q[9];
 	
-	//std::cout << A << std::endl;
-	//EigenSolver<Matrix3d> es(A);
 	Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> es(A);
-	/*std::cout << "The eigenvalues of A are:" << endl << es.eigenvalues() << endl;
-	std::cout << "The matrix of eigenvectors, V, is:" << endl << es.eigenvectors() << endl << endl;*/
 
 
 	//move zero vector to z
@@ -671,9 +580,6 @@ void CylinderFitter::aqd_fitting()
 	}
 	
 	Eigen::Matrix3d R, D, RT;
-	//std::cout << "R: " << R << std::endl;
-	//std::cout << "D: " << D << std::endl;
-	//std::cout << "RT: " << RT << std::endl;
 
 	for (size_t i = 0; i < 3; i++)
 	{
@@ -702,14 +608,6 @@ void CylinderFitter::aqd_fitting()
 	}
 
 	RT = R.transpose();
-	//std::cout << "D value: " << std::endl << D << std::endl;
-	//std::cout << "R: " << std::endl << R << std::endl;
-	//std::cout << "RT: " << std::endl << RT << std::endl;
-	//std::cout << "R * RT: " << std::endl << R * RT << std::endl;
-	//std::cout << "det R: " << R.determinant() << std::endl;
-
-	//R served as a transformation
-	//x' = RT x - trans, a = 0.5 DP RT b
 	
 	//compute the pseudo inverse of D
 	Eigen::Matrix3d DP;
@@ -737,11 +635,8 @@ void CylinderFitter::aqd_fitting()
 	Eigen::Vector3d rotb = RT * b;
 	Eigen::Vector3d bnew = rotb - DP * D * rotb;
 	Eigen::Vector3d trans = -0.5 * DP * RT * b;
-	
-	//std::cout << "bnew: " << bnew << std::endl;
-	//double cnew = (trans.transpose() * (D * trans)) + rotb.transpose() * trans + circularCone.q[0];
+
 	double cnew = (trans.transpose() * (D * trans)) + circularCylinder.q[0] + rotb.transpose() * trans;
-	//std::cout << "cnew: " << cnew << std::endl;
 	
 	double r2 = ( -2.0 * cnew / (D(0, 0) + D(1, 1)));
 	//std::cout << "radius: " << r << std::endl;
@@ -762,18 +657,6 @@ void CylinderFitter::aqd_fitting()
 		zdir[i] = tmpz[i];
 	}
 	
-
-	//convert cylinder back
-
-	//allquadrics::TriangleMesh inputMesh;
-	//char* defaultInput = "cylinder.obj";
-	//inputMesh.loadObj(defaultInput);
-	//inputMesh.centerAndScale(1);
-	//allquadrics::Quadric circularCone;
-	//fitCircularCylinder(inputMesh, circularCone);
-	//cout << "direct fit for circular cylinder: " << endl;
-	//outputQuadric(circularCone);
-	//cout << endl << endl;
 }
 
 void CylinderFitter::fitting()
@@ -809,7 +692,6 @@ void CylinderFitter::fitting()
 
 	}
 
-	//commented on 0812
 	if (flag_using_aqd)
 	{
 		aqd_fitting();
@@ -822,9 +704,7 @@ void CylinderFitter::fitting()
 	ApprCylinder3<double>* fitter = NULL;
 	if (flag_first_time)
 	{
-		//ApprCylinder3<double> fitter(numThreads, 1024, 512);
 		fitter = new ApprCylinder3<double>(numThreads, 1024, 512);
-		//flag_first_time = false;
 	}
 	else
 	{
@@ -833,13 +713,9 @@ void CylinderFitter::fitting()
 		{
 			axis[i] = zdir[i];
 		}
-		//std::cout << "axis: " << axis[0] << " " << axis[1] << " " << axis[2] << std::endl;
-		//specify axis, GT never change it.
 		fitter = new ApprCylinder3<double>(axis);
 	}
 
-	//ApprCylinder3<double> fitter(numThreads, 2048, 1024);
-	//ApprCylinder3<double> fitter(1);
 	std::vector<Vector3<double>> positions;
 
 	for (size_t i = 0; i < input_pts.size(); i++)
@@ -853,18 +729,14 @@ void CylinderFitter::fitting()
 	unsigned int numVertices = static_cast<unsigned int>(positions.size());
 	Cylinder3<double> cylinder;
 	double fitting_error = (*fitter)(numVertices, positions.data(), cylinder);
-	//std::cout << "min error for fitting cylinder = " << fitting_error << std::endl;
 	for (size_t i = 0; i < 3; i++)
 	{
 		this->loc[i] = cylinder.axis.origin[i];
 		this->zdir[i] = cylinder.axis.direction[i];
 	}
 	this->radius = cylinder.radius;
-	//this->height = cylinder.height;
 	get_vertical_vectors(this->zdir, this->xdir, this->ydir);
-	//std::cout << "x dir" << this->xdir << " y dir : " << this->ydir << std::endl;
 
-	//other parameters to be changed
 }
 
 void CylinderFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d>& tgt, bool save_uv)
@@ -894,12 +766,6 @@ void CylinderFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d
 			if (unit_radius * this->ydir < 0.0)
 				u = 2 * M_PI - u;
 			this->us.push_back(u);
-
-			//update us_ref
-			/*double u_ref = u;
-			if (u_ref > M_PI)
-				u_ref = u - 2 * M_PI;
-			us_ref.push_back(u_ref);*/
 		}
 	}
 
@@ -914,22 +780,11 @@ void CylinderFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d
 
 		if ((u_max - u_min) > 2 * M_PI - TH_CIRCLE)
 		{
-			/*double u_max_ref = *std::max_element(us_ref.begin(), us_ref.end());
-			double u_min_ref = *std::min_element(us_ref.begin(), us_ref.end());
-			if ((u_max_ref - u_min_ref) < 2 * M_PI - TH_CIRCLE)
-			{
-				u_max = u_max_ref;
-				u_min = u_min_ref;
-			}*/
 			update_minmax(us, u_min, u_max);
 			if ((u_max - u_min) > 2 * M_PI - TH_CIRCLE)
 			{
 				u_closed = true;
 			}
-			/*else
-			{
-				u_closed = false;
-			}*/
 
 			if (u_closed)
 			{
@@ -937,10 +792,6 @@ void CylinderFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d
 				u_min = 0.0;
 			}
 		}
-		/*else
-		{
-			u_closed = false;
-		}*/
 		
 	}
 }
@@ -991,7 +842,6 @@ void CylinderFitter::projection_with_normal(const std::vector<vec3d>& src, std::
 		this->v_max = *std::max_element(this->vs.begin(), this->vs.end());
 		this->v_min = *std::min_element(this->vs.begin(), this->vs.end());
 
-
 		if ((u_max - u_min) > 2 * M_PI - TH_CIRCLE)
 		{
 			update_minmax(us, u_min, u_max);
@@ -999,10 +849,6 @@ void CylinderFitter::projection_with_normal(const std::vector<vec3d>& src, std::
 			{
 				u_closed = true;
 			}
-			/*else
-			{
-				u_closed = false;
-			}*/
 
 			if (u_closed)
 			{
@@ -1017,7 +863,6 @@ void CylinderFitter::projection_with_normal(const std::vector<vec3d>& src, std::
 
 void PlaneFitter::fitting()
 {
-	//aqd_fitting();
 	assert(input_pts.size() != 0);
 	ApprOrthogonalPlane3<double>  fitter;
 	std::vector<Vector3<double>> positions;
@@ -1077,18 +922,13 @@ void CreateLMCone(std::vector<Vector3<double>> const& X,
 {
 	ApprCone3<double> fitter;
 	size_t const maxIterations = 32;
-	//size_t const maxIterations = 128;
 	double const updateLengthTolerance = 1e-04;
 	double const errorDifferenceTolerance = 1e-08;
 	////init value
 	double const lambdaFactor = 0.001;
 	double const lambdaAdjust = 10.0;
 
-	//modified value
-	/*double const lambdaFactor = 0.001;
-	double const lambdaAdjust = 100.0;*/
 	size_t const maxAdjustments = 8;
-	//size_t const maxAdjustments = 32;
 	bool useConeInputAsInitialGuess = false;
 
 	fitter(static_cast<int>(X.size()), X.data(),
@@ -1134,14 +974,9 @@ void ConeFitter::aqd_fitting()
 		datapts.push_back(data_pnw(pos, normal, 1.0));
 	}
 
-	//not scaled and centered yet
 	allquadrics::Quadric circularCone;
-	//fitCircularCylinder(datapts, circularCone);
 	fitCircularCone(datapts, circularCone);
 
-	/*cout << "Cone para: " << endl;
-	outputQuadric(circularCone);
-	cout << endl;*/
 
 	Eigen::Matrix3d A;
 	A(0, 0) = circularCone.q[4];
@@ -1151,18 +986,13 @@ void ConeFitter::aqd_fitting()
 	A(1, 2) = A(2, 1) = circularCone.q[8] * 0.5;
 	A(2, 2) = circularCone.q[9];
 
-	//std::cout << A << std::endl;
-	//EigenSolver<Matrix3d> es(A);
 	if (A.determinant() > 0)
 	{
 		A = -A;
 	}
 
 	Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> es(A);
-	/*std::cout << "The eigenvalues of A are:" << endl << es.eigenvalues() << endl;
-	std::cout << "The matrix of eigenvectors, V, is:" << endl << es.eigenvectors() << endl << endl;*/
-
-
+	
 	//move zero vector to z
 	std::vector<int> id_vec({ 0,1,2 });
 	double min_error = es.eigenvalues()[0];
@@ -1184,10 +1014,7 @@ void ConeFitter::aqd_fitting()
 	}
 
 	Eigen::Matrix3d R, D, RT;
-	//std::cout << "R: " << R << std::endl;
-	//std::cout << "D: " << D << std::endl;
-	//std::cout << "RT: " << RT << std::endl;
-
+	
 	for (size_t i = 0; i < 3; i++)
 	{
 		for (size_t j = 0; j < 3; j++)
@@ -1215,15 +1042,7 @@ void ConeFitter::aqd_fitting()
 	}
 
 	RT = R.transpose();
-	//std::cout << "D value: " << std::endl << D << std::endl;
-	//std::cout << "R: " << std::endl << R << std::endl;
-	//std::cout << "RT: " << std::endl << RT << std::endl;
-	//std::cout << "R * RT: " << std::endl << R * RT << std::endl;
-	//std::cout << "det R: " << R.determinant() << std::endl;
-
-	//R served as a transformation
-	//x' = RT x - trans, trans = -0.5 * A-1 b
-
+	
 	//compute the pseudo inverse of D
 	Eigen::Matrix3d DP;
 	for (size_t i = 0; i < 3; i++)
@@ -1246,39 +1065,16 @@ void ConeFitter::aqd_fitting()
 		}
 	}
 
-	//std::cout << "D inverse: " << std::endl << DP << std::endl;
-
 	Eigen::Vector3d b(circularCone.q[1], circularCone.q[2], circularCone.q[3]);
-	//Vector3d rotb = RT * b;
-	//Vector3d bnew = rotb - DP * D * rotb;
-	//Vector3d trans = -0.5 * DP * RT * b;
-
-	////std::cout << "bnew: " << bnew << std::endl;
-	////double cnew = (trans.transpose() * (D * trans)) + rotb.transpose() * trans + circularCone.q[0];
-	//double cnew = (trans.transpose() * (D * trans)) + circularCone.q[0] + rotb.transpose() * trans;
+	
 	
 	Eigen::Vector3d trans = -0.5 * DP * RT * b;
 	Eigen::Vector3d bnew = (RT * b + 2.0 * D * trans);
 
-	/*std::cout << "R: " << std::endl << R << std::endl;
-	std::cout << "trans: " << trans << std::endl;
-	std::cout << "bnew: " << bnew << std::endl;*/
-
-
 	double cnew = (trans.transpose() * (D * trans)) +  circularCone.q[0]  + b.transpose() * R * trans;
 	
-	//std::cout << "cnew: " << cnew << std::endl;
-
-	//double r2 = (-2.0 * cnew / (D(0, 0) + D(1, 1)));
-	////std::cout << "radius: " << r << std::endl;
-	//assert(r2 > 0);
-	//this->radius = sqrt(r2);
-	
 	double cota = sqrt(-(D(0, 0) + D(1, 1)) / (2.0 * D(2, 2)));
-	//std::cout << "tana: " << cota << std::endl;
-	//angle = asin(std::max(std::min(sina, 1.0), -1.0));
 	angle = atan(1.0 / cota); //positive
-	//std::cout << "sin(angle) : " << sin(angle) << " cos(angle): " << cos(angle) << std::endl;
 	radius = 0.0;
 
 	Eigen::Vector3d tmpx(1, 0, 0), tmpy(0, 1, 0), tmpz(0, 0, 1), tmploc = R * trans;
@@ -1286,7 +1082,7 @@ void ConeFitter::aqd_fitting()
 	tmpx = R * tmpx;
 	tmpy = R * tmpy;
 	tmpz = R * tmpz;
-	//double cnew = circularCone.q[0];
+	
 
 	for (size_t i = 0; i < 3; i++)
 	{
@@ -1297,20 +1093,6 @@ void ConeFitter::aqd_fitting()
 	}
 	u_max = 2 * M_PI;
 
-	//std::cout << "zdir: " << zdir << std::endl;
-	//std::cout << "loc: " << tmploc << std::endl;
-
-	//convert cylinder back
-
-	//allquadrics::TriangleMesh inputMesh;
-	//char* defaultInput = "cylinder.obj";
-	//inputMesh.loadObj(defaultInput);
-	//inputMesh.centerAndScale(1);
-	//allquadrics::Quadric circularCone;
-	//fitCircularCylinder(inputMesh, circularCone);
-	//cout << "direct fit for circular cylinder: " << endl;
-	//outputQuadric(circularCone);
-	//cout << endl << endl;
 }
 
 void ConeFitter::sfpn_fitting()
@@ -1349,7 +1131,6 @@ void ConeFitter::sfpn_fitting()
 	Eigen::MatrixXd ATA = A.transpose() * A;
 	Eigen::MatrixXd ATb = A.transpose() * b;
 	Eigen::FullPivLU<Eigen::MatrixXd> lu_decomp(ATA);
-	//std::cout << "The rank of ATA is " << lu_decomp.rank() << std::endl;
 	if (lu_decomp.rank() != 3)
 	{
 		ATA += lambda_ls * Eigen::MatrixXd::Identity(3,3);
@@ -1451,9 +1232,6 @@ void ConeFitter::fitting()
 
 void ConeFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d>& tgt, bool save_uv)
 {
-	//modified on 20210602, not used tmporaly
-	/*tgt = src;
-	return;*/
 
 	tgt.clear();
 	if (save_uv)
@@ -1501,12 +1279,7 @@ void ConeFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d>& t
 		{
 			us.push_back(u);
 			vs.push_back(v);
-			/*double u_ref = u;
-			if (u_ref > M_PI)
-				u_ref = u - 2 * M_PI;
-			us_ref.push_back(u_ref);*/
 		}
-		//tgt.push_back(loc + (tmp * zdir) * zdir + (radius + v * sin(angle)) * rad_vec);
 		tgt.push_back(loc + (tmp * zdir) * zdir + (radius + v * sin(angle)) * (xdir * cos(u) + ydir * sin(u)));
 	}
 
@@ -1520,35 +1293,21 @@ void ConeFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d>& t
 
 		if ((u_max - u_min) > 2 * M_PI - TH_CIRCLE)
 		{
-			/*double u_max_ref = *std::max_element(us_ref.begin(), us_ref.end());
-			double u_min_ref = *std::min_element(us_ref.begin(), us_ref.end());
-			if ((u_max_ref - u_min_ref) < 2 * M_PI - TH_CIRCLE)
-			{
-				u_max = u_max_ref;
-				u_min = u_min_ref;
-			}*/
 			update_minmax(us, u_min, u_max);
 			if ((u_max - u_min) > 2 * M_PI - TH_CIRCLE)
 			{
 				u_closed = true;
 			}
-			/*else
-			{
-				u_closed = false;
-			}*/
+			
 		}
-		/*else
-		{
-			u_closed = false;
-		}*/
+		
 	}
 }
 
 void ConeFitter::projection_with_normal(const std::vector<vec3d>& src, std::vector<vec3d>& tgt, std::vector<vec3d>& tgt_normal, bool save_uv)
 {
 	//modified on 20210602, not used tmporaly
-	/*tgt = src;
-	return;*/
+	
 
 	tgt.clear();
 	tgt_normal.clear();
@@ -1621,13 +1380,6 @@ void ConeFitter::projection_with_normal(const std::vector<vec3d>& src, std::vect
 				u_min = 0.0;
 			}
 
-			/*double u_max_ref = *std::max_element(us_ref.begin(), us_ref.end());
-			double u_min_ref = *std::min_element(us_ref.begin(), us_ref.end());
-			if ((u_max_ref - u_min_ref) < 2 * M_PI - TH_CIRCLE)
-			{
-				u_max = u_max_ref;
-				u_min = u_min_ref;
-			}*/
 		}
 	}
 }
@@ -1654,8 +1406,6 @@ void SphereFitter::fitting()
 		loc[i] = sphere.center[i];
 	}
 	radius = sphere.radius;
-	
-	//canonical frame
 	
 }
 
@@ -1687,14 +1437,6 @@ void SphereFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d>&
 			us.push_back(u);
 			vs.push_back(v);
 			double u_ref = u;
-			/*if (u_ref > M_PI)
-				u_ref = u - 2 * M_PI;
-			us_ref.push_back(u_ref);
-
-			double v_ref = v;
-			if (v_ref > M_PI)
-				v_ref = v - 2 * M_PI;
-			vs_ref.push_back(v_ref);*/
 		}
 		tgt.push_back(loc + radius * tmp);
 	}
@@ -1709,22 +1451,11 @@ void SphereFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d>&
 
 		if ((u_max - u_min) > 2 * M_PI - TH_CIRCLE)
 		{
-			/*double u_max_ref = *std::max_element(us_ref.begin(), us_ref.end());
-			double u_min_ref = *std::min_element(us_ref.begin(), us_ref.end());
-			if ((u_max_ref - u_min_ref) < 2 * M_PI - TH_CIRCLE)
-			{
-				u_max = u_max_ref;
-				u_min = u_min_ref;
-			}*/
 			update_minmax(us, u_min, u_max);
 			if ((u_max - u_min) > 2 * M_PI - TH_CIRCLE)
 			{
 				u_closed = true;
 			}
-			/*else
-			{
-				u_closed = false;
-			}*/
 
 			if (u_closed)
 			{
@@ -1733,20 +1464,10 @@ void SphereFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d>&
 			}
 
 		}
-		/*else
-		{
-			u_closed = false;
-		}*/
+		
 
 		if ((v_max - v_min) > 2 * M_PI - TH_CIRCLE)
 		{
-			/*double v_max_ref = *std::max_element(vs_ref.begin(), vs_ref.end());
-			double v_min_ref = *std::min_element(vs_ref.begin(), vs_ref.end());
-			if ((v_max_ref - v_min_ref) < 2 * M_PI - TH_CIRCLE)
-			{
-				v_max = v_max_ref;
-				v_min = v_min_ref;
-			}*/
 			update_minmax(vs, v_min, v_max);
 			if ((v_max - v_min) > 2 * M_PI - TH_CIRCLE)
 			{
@@ -1814,18 +1535,10 @@ void TorusFitter::fitting()
 		data[2] = input_pts[i][2];
 		positions.push_back(data);
 	}
-	/*ApprSphere3<double> fitter;
-	Sphere3<double> sphere;
-	fitter.FitUsingSquaredLengths((int)positions.size(), positions.data(), sphere);
-	for (size_t i = 0; i < 3; i++)
-	{
-		loc[i] = sphere.center[i];
-	}*/
 
 	//canonical frame
 	Vector3<double> center, normal;
 	CreateLMTorus(positions, center, normal, max_radius, min_radius);
-	//CreateGNTorus(positions, center, normal, max_radius, min_radius);
 	
 	//check nan
 	if (isnan(min_radius))
@@ -1885,15 +1598,6 @@ void TorusFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d>& 
 			us.push_back(u);
 			vs.push_back(v);
 
-			/*double u_ref = u;
-			if (u_ref > M_PI)
-				u_ref = u - 2 * M_PI;
-			us_ref.push_back(u_ref);
-
-			double v_ref = v;
-			if (v_ref > M_PI)
-				v_ref = v - 2 * M_PI;
-			vs_ref.push_back(v_ref);*/
 		}
 		tgt.push_back(GetPosition(u,v));
 	}
@@ -1905,18 +1609,9 @@ void TorusFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d>& 
 		this->u_min = *std::min_element(this->us.begin(), this->us.end());
 		this->v_max = *std::max_element(this->vs.begin(), this->vs.end());
 		this->v_min = *std::min_element(this->vs.begin(), this->vs.end());
-		//std::cout << "v min " << v_min << " v max: " << v_max << std::endl;
-		//std::cout << "u min " << u_min << " u max: " << u_max << std::endl;
-		//std::cout << "min radius " << min_radius << " max radiu " << max_radius << std::endl;
+		
 		if ((u_max - u_min) > 2 * M_PI - TH_CIRCLE)
 		{
-			/*double u_max_ref = *std::max_element(us_ref.begin(), us_ref.end());
-			double u_min_ref = *std::min_element(us_ref.begin(), us_ref.end());
-			if ((u_max_ref - u_min_ref) < 2 * M_PI - TH_CIRCLE)
-			{
-				u_max = u_max_ref;
-				u_min = u_min_ref;
-			}*/
 			update_minmax(us, u_min, u_max);
 			if ((u_max - u_min) > 2 * M_PI - TH_CIRCLE)
 			{
@@ -1929,25 +1624,11 @@ void TorusFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d>& 
 				u_min = 0.0;
 			}
 			
-			/*else
-			{
-				u_closed = false;
-			}*/
 		}
-		/*else
-		{
-			u_closed = false;
-		}*/
+		
 
 		if ((v_max - v_min) > 2 * M_PI - TH_CIRCLE)
 		{
-			/*double v_max_ref = *std::max_element(vs_ref.begin(), vs_ref.end());
-			double v_min_ref = *std::min_element(vs_ref.begin(), vs_ref.end());
-			if ((v_max_ref - v_min_ref) < 2 * M_PI - TH_CIRCLE)
-			{
-				v_max = v_max_ref;
-				v_min = v_min_ref;
-			}*/
 			update_minmax(vs, v_min, v_max);
 			if ((v_max - v_min) > 2 * M_PI - TH_CIRCLE)
 			{
@@ -2024,7 +1705,6 @@ void SplineFitter::fitting()
 		positions.push_back(data);
 	}
 
-
 	BSplineSurfaceFit<double> fitter(degree, numControls, numSamples[0], degree,
 		numControls, numSamples[1], positions.data());
 
@@ -2064,12 +1744,6 @@ void SplineFitter::fitting()
 
 void SplineFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d>& tgt, bool save_uv)
 {
-	//value assign
-	//tgt = src;
-	//return;
-	//nearest neighbors of current points
-	//not udpating uv
-
 	//if nurbs set, get spline_pts firstly
 	if (nurbs_surf && spline_pts.empty())
 	{
@@ -2105,11 +1779,9 @@ void SplineFitter::projection(const std::vector<vec3d>& src, std::vector<vec3d>&
 
 vec3d ThinPlateSpline::GetPosition(double u, double v)
 {
-	//assert(spline != NULL);
 	assert(vec_thinplate.size() == 3);
 	vec3d value;
-	//Vector3<double> jet;
-	//spline->Evaluate(u, v, 0, &jet);
+	
 	for (size_t i = 0; i < 3; i++)
 	{
 		//value[i] = jet[i];
@@ -2122,11 +1794,9 @@ void ThinPlateSpline::fitting()
 {
 	int const numPoints = 100;
 	assert(input_pts.size() == numPoints);
-	//std::vector<Vector3<double>> positions;
 	std::vector<std::array<double, numPoints>> fs(3);
 	for (size_t i = 0; i < input_pts.size(); i++)
 	{
-		//Vector3<double> data;
 		fs[0][i] = input_pts[i][0];
 		fs[1][i] = input_pts[i][1];
 		fs[2][i] = input_pts[i][2];
@@ -2135,7 +1805,6 @@ void ThinPlateSpline::fitting()
 	//int const numPoints = 9;
 	std::array<double, numPoints> x;
 	std::array<double, numPoints> y;
-	//std::array<double, numPoints> f = { 1.0, 2.0, 3.0, 3.0, 2.0, 1.0, 1.0, 2.0, 3.0 };
 
 	int dim = (int)std::sqrt(numPoints);
 	double invp = 1.0 / (dim - 1);
@@ -2157,49 +1826,6 @@ void ThinPlateSpline::fitting()
 		vec_thinplate[i] = new IntpThinPlateSpline2<double>(numPoints, x.data(), y.data(), fs[i].data(), smoothness, false);
 		//not transform to unit sphere
 	}
-
-	//// Resample on a 7x7 regular grid.
-	//int const numResample = 6;
-	//double const invResample = 1.0 / static_cast<double>(numResample);
-	//double smooth, interp, functional;
-
-	//// No smoothing, exact interpolation at grid points.
-	//smooth = 0.0;
-	//IntpThinPlateSpline2<double> noSmooth(
-	//	numPoints, x.data(), y.data(), f.data(), smooth, false);
-	////output << "no smoothing (smooth parameter is 0.0)" << std::endl;
-	//for (int j = 0; j <= numResample; ++j)
-	//{
-	//	for (int i = 0; i <= numResample; ++i)
-	//	{
-	//		interp = noSmooth(invResample * i, invResample * j);
-	//		//output << interp << " ";
-	//	}
-	//	//output << std::endl;
-	//}
-	//functional = noSmooth.ComputeFunctional();
-	////output << "functional = " << functional << std::endl << std::endl;
-
-	//// Increasing amounts of smoothing.
-	//smooth = 0.1;
-	//for (int k = 1; k <= 6; ++k, smooth *= 10.0)
-	//{
-	//	IntpThinPlateSpline2<double> spline(
-	//		numPoints, x.data(), y.data(), f.data(), smooth, false);
-	//	//output << "smoothing (parameter is " << smooth << ")" << std::endl;
-	//	for (int j = 0; j <= numResample; ++j)
-	//	{
-	//		for (int i = 0; i <= numResample; ++i)
-	//		{
-	//			interp = spline(invResample * i, invResample * j);
-	//			interp = noSmooth(invResample * i, invResample * j);
-	//			//output << interp << " ";
-	//		}
-	//		//output << std::endl;
-	//	}
-	//	functional = noSmooth.ComputeFunctional();
-	//	//output << "functional = " << functional << std::endl << std::endl;
-	//}
 
 	spline_pts.clear();
 	double split = 1.0 / ((double)dim - 1.0);
@@ -2243,15 +1869,12 @@ SplineFitter::SplineFitter(int u_degree, int v_degree,
 	double _u_min, double _u_max, double _v_min, double _v_max)
 {
 	this->u_closed = _u_closed, this->v_closed = _v_closed;
-	// this->u_min = _u_closed ? 0 : _u_min, this->u_max = _u_closed ? 2 * M_PI : _u_max;
-	// this->v_min = _v_closed ? 0 : _v_min, this->v_max = _v_closed ? 2 * M_PI : _v_max;
 	this->u_min = _u_min, this->u_max = _u_max;
 	this->v_min = _v_min, this->v_max = _v_max;
 
 	gte::BasisFunctionInput<double> my_u_input;
 	my_u_input.degree = u_degree;
 	my_u_input.numControls = (int)my_uknots.size() - u_degree - 1;
-	//my_u_input.periodic = _u_closed;
 	my_u_input.periodic = false;
 	my_u_input.uniform = false;
 	std::vector<std::pair<double, int>> knots_stataus;
@@ -2275,7 +1898,6 @@ SplineFitter::SplineFitter(int u_degree, int v_degree,
 	gte::BasisFunctionInput<double> my_v_input;
 	my_v_input.degree = v_degree;
 	my_v_input.numControls = (int)my_vknots.size() - v_degree - 1;
-	//my_v_input.periodic = _v_closed;
 	my_v_input.periodic = false;
 	my_v_input.uniform = false;
 
@@ -2298,57 +1920,4 @@ SplineFitter::SplineFitter(int u_degree, int v_degree,
 	}
 	nurbs_surf = new gte::NURBSSurface<3, double>(my_u_input, my_v_input, controls.data(), myweights.data());
 	numControls = my_u_input.numControls;
-
-	/*this->u_closed = _u_closed, this->v_closed = _v_closed;
-	this->u_min = _u_closed ? 0 : _u_min, this->u_max = _u_closed ? 2 * M_PI : _u_max;
-	this->v_min = _v_closed ? 0 : _v_min, this->v_max = _v_closed ? 2 * M_PI : _v_max;
-
-	gte::BasisFunctionInput<double> my_u_input;
-	my_u_input.degree = u_degree;
-	my_u_input.numControls = (int)my_uknots.size() - u_degree - 1;
-	my_u_input.periodic = _u_closed;
-	my_u_input.uniform = false;
-	std::vector<std::pair<double, int>> knots_stataus;
-	knots_stataus.push_back(std::make_pair(my_uknots[0], 1));
-	for (size_t i = 1; i < my_uknots.size(); i++)
-	{
-		if (my_uknots[i] == knots_stataus.back().first)
-			knots_stataus.back().second++;
-		else
-			knots_stataus.push_back(std::make_pair(my_uknots[i], 1));
-	}
-
-	my_u_input.numUniqueKnots = (int)knots_stataus.size();
-	my_u_input.uniqueKnots.resize(my_u_input.numUniqueKnots);
-	for (size_t i = 0; i < knots_stataus.size(); i++)
-	{
-		my_u_input.uniqueKnots[i].t = knots_stataus[i].first;
-		my_u_input.uniqueKnots[i].multiplicity = knots_stataus[i].second;
-	}
-
-	gte::BasisFunctionInput<double> my_v_input;
-	my_v_input.degree = v_degree;
-	my_v_input.numControls = (int)my_vknots.size() - v_degree - 1;
-	my_v_input.periodic = _v_closed;
-	my_v_input.uniform = false;
-
-	knots_stataus.resize(0);
-	knots_stataus.push_back(std::make_pair(my_vknots[0], 1));
-	for (size_t i = 1; i < my_vknots.size(); i++)
-	{
-		if (my_vknots[i] == knots_stataus.back().first)
-			knots_stataus.back().second++;
-		else
-			knots_stataus.push_back(std::make_pair(my_vknots[i], 1));
-	}
-
-	my_v_input.numUniqueKnots = (int)knots_stataus.size();
-	my_v_input.uniqueKnots.resize(my_v_input.numUniqueKnots);
-	for (size_t i = 0; i < knots_stataus.size(); i++)
-	{
-		my_v_input.uniqueKnots[i].t = knots_stataus[i].first;
-		my_v_input.uniqueKnots[i].multiplicity = knots_stataus[i].second;
-	}
-	nurbs_surf = new gte::NURBSSurface<3, double>(my_u_input, my_v_input, controls.data(), myweights.data());
-	numControls = my_u_input.numControls;*/
 }

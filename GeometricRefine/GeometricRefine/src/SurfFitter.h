@@ -12,28 +12,21 @@ class SurfFitter : public MySurf
 public:
 	SurfFitter()
 	{
-		/*u_split = 30;
-		v_split = 30;*/
 		u_split = 20;
 		v_split = 20;
-		//depend on input
 		dim_u_input = -1;
 		dim_v_input = -1; // only set once, by set_points
-		//flag_using_aqd = true;
 		flag_using_aqd = false;
 		flag_input_normal = false;
 	}
 
 	SurfFitter(bool using_aqd)
 	{
-		/*u_split = 30;
-		v_split = 30;*/
 		u_split = 20;
 		v_split = 20;
 		//depend on input
 		dim_u_input = -1;
 		dim_v_input = -1; // only set once, by set_points
-		//flag_using_aqd = true;
 		flag_using_aqd = using_aqd;
 		flag_input_normal = false;
 	}
@@ -147,14 +140,10 @@ public:
 	void get_grid_tri(std::vector<vec3d>& pts, std::vector<std::vector<size_t>>& faces);
 	void save_input_patch_obj(const std::string& fn);
 
-	//virtual void write_obj_surf(std::ostream& out, size_t& vcounter, int u_div, int v_div);
-	//get_uv()
+
 	virtual void fitting() = 0;
 
-	/*virtual vec3d GetNormal(double u, double v)
-	{
-		return vec3d(0.0, 0.0, 0.0);
-	}*/
+
 
 	void write_data_surf(std::ostream& out, int u_div, int v_div, bool flag_normal = false);
 
@@ -229,7 +218,6 @@ public:
 		{
 			return loc + radius * (cos(u) * xdir + sin(u) * ydir) + v * zdir;
 		}
-		//std::cout << "cylinder pos" << std::endl;
 	}
 
 

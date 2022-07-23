@@ -14,13 +14,7 @@ void NURBSCurveFitter::fitting()
         }
     }
 
-    //vanilla version
-    /*std::vector<vec3> addon_points;
-    std::vector<double> weights, addon_weights;
-    cf = new CurveFitting(points, weights, addon_points, addon_weights, is_closed(), degree, num_ctrl, iter);
-    */
-    //mix version
-
+   
     std::vector<vec3> addon_points;
     std::vector<double> weights(points.size(), 1.0), addon_weights;
 
@@ -55,15 +49,7 @@ void NURBSCurveFitter::fitting()
 
 void NURBSCurveFitter::get_seg_pts()
 {
-    //equal distance
-   /* seg_pts.clear();
-    double t_inter = 1.0 / (t_split - 1);
-    for (size_t i = 0; i < t_split; i++)
-    {
-        double dt = t_min + i * (t_max - t_min) * t_inter;
-        seg_pts.push_back(GetPosition(dt));
-    }*/
-
+    
     //equal distance sample
     if (cf && nurbs_pts.empty())
     {
@@ -173,7 +159,6 @@ void NURBSSurfFitter::build_aabb_tree()
         {
             for (size_t k = 0; k < sample - 1; k++)
             {
-                //faces.push_back(std::vector<size_t>({ counter + j * v_split + k, counter + (j + 1) * v_split + k, counter + (j + 1) * v_split + k + 1, counter + j * v_split + k + 1 }));
                 faces.push_back(std::vector<size_t>({ counter + j * sample + k, counter + (j + 1) * sample + k, counter + (j + 1) * sample + k + 1 }));
                 faces.push_back(std::vector<size_t>({ counter + j * sample + k, counter + (j + 1) * sample + k + 1, counter + j * sample + k + 1 }));
 
@@ -184,7 +169,6 @@ void NURBSSurfFitter::build_aabb_tree()
         {
             for (size_t j = 0; j < sample - 1; j++)
             {
-                //faces.push_back(std::vector<size_t>({ counter + (u_split - 1) * v_split + j, counter + j, counter + j + 1, counter + (u_split - 1) * v_split + j + 1 }));
                 faces.push_back(std::vector<size_t>({ counter + (sample - 1) * sample + j, counter + j, counter + j + 1 }));
                 faces.push_back(std::vector<size_t>({ counter + (sample - 1) * sample + j,  counter + j + 1, counter + (sample - 1) * sample + j + 1 }));
             }
@@ -198,9 +182,6 @@ void NURBSSurfFitter::build_aabb_tree()
             }
         }
     }
-
-    //for testing
-    //igl::writeOBJ("test.obj", aabb_V, aabb_F);
 
     aabb_tree = new igl::AABB<Eigen::MatrixXd, 3>();
     aabb_tree->init(aabb_V, aabb_F);
@@ -237,11 +218,6 @@ void NURBSSurfFitter::projection(const std::vector<vec3d>& src, std::vector<vec3
     //impl as nearest neighbors, no longer used
     if (sf && nurbs_pts.empty())
     {
-        /*double split = is_closed() ? 1.0 / sample : 1.0 / (sample - 1);
-        for (size_t i = 0; i < sample; i++)
-        {
-            nurbs_pts.push_back(GetPosition(split * i));
-        }*/
         int denom_u = sample - 1, denom_v = sample - 1;
         if (u_closed)
             denom_u = sample;
@@ -311,11 +287,6 @@ void NURBSSurfFitter::projection_with_normal(const std::vector<vec3d>& src, std:
     //impl as nearest neighbors, no longer used
     if (sf && nurbs_pts.empty())
     {
-        /*double split = is_closed() ? 1.0 / sample : 1.0 / (sample - 1);
-        for (size_t i = 0; i < sample; i++)
-        {
-            nurbs_pts.push_back(GetPosition(split * i));
-        }*/
         int denom_u = sample - 1, denom_v = sample - 1;
         if (u_closed)
             denom_u = sample;
@@ -368,13 +339,6 @@ void NURBSSurfFitter::fitting()
         }
     }
 
-    //vanilla version
-   /* std::vector<std::vector<double>> grid_weights;
-    std::vector<vec3> addon_pts;
-    std::vector<double> addon_weights;
-    sf = new SurfFitting(gridpoints, grid_weights, addon_pts, addon_weights, u_closed, v_closed, u_degree, v_degree, num_u_ctrl, num_v_ctrl, iter);
-    */
-
     //all together version
     std::vector<std::vector<double>> grid_weights;
     std::vector<vec3> addon_pts;
@@ -406,52 +370,6 @@ void NURBSSurfFitter::fitting()
                 addon_pts[i][j] = nongrid_pts[i][j];
             }
         }
-        //sf = new SurfFitting(gridpoints, grid_weights, addon_pts, nongrid_weights, u_closed, v_closed, u_degree, v_degree, num_u_ctrl, num_v_ctrl, iter);
-
-        ////output fitter input
-        //std::ofstream ofs("gridpoints.txt");
-        //ofs << gridpoints.size() << " " << gridpoints.front().size() << " 3" << std::endl;
-        //for (size_t i = 0; i < gridpoints.size(); i++)
-        //{
-        //    for (size_t j = 0; j < gridpoints.front().size(); j++)
-        //    {
-        //        for (size_t k = 0; k < 3; k++)
-        //        {
-        //            ofs << gridpoints[i][j][k] << std::endl;
-        //        }
-        //    }
-        //}
-        //ofs.close();
-
-        //ofs.open("gridweight.txt");
-        //ofs << gridpoints.size() << " " << gridpoints.front().size()<< std::endl;
-        //for (size_t i = 0; i < gridpoints.size(); i++)
-        //{
-        //    for (size_t j = 0; j < gridpoints.front().size(); j++)
-        //    {
-        //        ofs << grid_weights[i][j] << std::endl;
-        //    }
-        //}
-        //ofs.close();
-
-        //ofs.open("addon_pts.txt");
-        //ofs << addon_pts.size() << " 3" << std::endl;
-        //for (size_t i = 0; i < addon_pts.size(); i++)
-        //{
-        //    for (size_t j = 0; j < 3; j++)
-        //    {
-        //        ofs << addon_pts[i][j] << std::endl;
-        //    }
-        //}
-        //ofs.close();
-        //
-        //ofs.open("addon_weights.txt");
-        //ofs << nongrid_weights.size() << std::endl;
-        //for (size_t i = 0; i < addon_pts.size(); i++)
-        //{
-        //    ofs << nongrid_weights[i] << std::endl;
-        //}
-
 
         sf = new SurfFitting(gridpoints, grid_weights, addon_pts, nongrid_weights, u_closed, v_closed, u_degree, v_degree, num_u_ctrl, num_v_ctrl, iter, sample_rate, smoothness);
     }
@@ -465,19 +383,4 @@ void NURBSSurfFitter::fitting()
     build_aabb_tree();
 
     return;
-    //old version, no longer used
-    nurbs_pts.clear();
-    int denom_u = sample - 1, denom_v = sample - 1;
-    if (u_closed)
-        denom_u = sample;
-    for (size_t i = 0; i < sample; i++)
-    {
-        double du = u_min + i * (u_max - u_min) / denom_u;
-        for (size_t j = 0; j < sample; j++)
-        {
-            double dv = v_min + j * (v_max - v_min) / denom_v;
-            nurbs_pts.push_back(GetPosition(du, dv));
-        }
-    }
-
 }
