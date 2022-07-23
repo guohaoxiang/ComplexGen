@@ -37,7 +37,6 @@ def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     parser.add_argument('--no_output', action='store_true', help = 'not output for evaluation')
     parser.add_argument('--reuseid', action='store_true', help = 'reuse id for distance computation')
-    parser.add_argument('--ori_topo', action = 'store_true', help = 'original topo embed')
     parser.add_argument('--ori_mlp', action='store_true', help = 'use original version of MLPs')
     parser.add_argument('--ckpt_interval', default=3000, type=int)
     parser.add_argument('--dist_th', default=0.1, type=float)
@@ -877,9 +876,7 @@ class DETR_Corner_Tripath(nn.Module):
         self.aux_loss = aux_loss
         
         if not args.no_topo:
-          if args.ori_topo:
-            self.corner_topo_embed = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim if not args.matrix_eigen_similarity else 24, 2) #topo embed dim:256, matrix_eigen_similarity: False
-          else:
+          if True:
             self.corner_topo_embed_curve = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim, 1) #topo embed dim:256, matrix_eigen_similarity: False
             self.corner_topo_embed_patch = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim, 1) #topo embed dim:256, matrix_eigen_similarity: False
           #(self, input_dim, hidden_dim, output_dim, num_layers, sin=False):
@@ -923,16 +920,12 @@ class DETR_Corner_Tripath(nn.Module):
           if(args.normalize_embed_feature):
             output_corner_topo_embedding = F.normalize(self.corner_topo_embed(hs), dim=-1)
           else:
-            if args.ori_topo:
-              output_corner_topo_embedding = self.corner_topo_embed(hs)
-            else:
+            if True:
               output_corner_topo_embedding_curve = self.corner_topo_embed_curve(hs)
               output_corner_topo_embedding_patch = self.corner_topo_embed_patch(hs)
         
         if not args.no_topo:
-          if args.ori_topo:
-            out = {'pred_logits': outputs_class[-1], 'pred_corner_position': outputs_corner_coord[-1], 'corner_topo_embed': output_corner_topo_embedding[-1]} #only return last layer info
-          else:
+          if True:
             out = {'pred_logits': outputs_class[-1], 'pred_corner_position': outputs_corner_coord[-1], 'corner_topo_embed_curve': output_corner_topo_embedding_curve[-1], 'corner_topo_embed_patch': output_corner_topo_embedding_patch[-1]} #only return last layer info         
           if self.aux_loss:
             out['aux_outputs'] = self._set_aux_loss(outputs_class, outputs_corner_coord, output_corner_topo_embedding)
@@ -1023,9 +1016,7 @@ class DETR_Curve_Tripath(nn.Module):
 
           
         if not args.no_topo:
-          if args.ori_topo:
-            self.curve_topo_embed = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim, 3)
-          else:
+          if True:
             self.curve_topo_embed_corner = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim, 1)
             self.curve_topo_embed_patch = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim, 1)
 
@@ -1132,17 +1123,13 @@ class DETR_Curve_Tripath(nn.Module):
           if(args.normalize_embed_feature):
             output_curve_topo_embedding = F.normalize(self.curve_topo_embed(hs), dim=-1)
           else:
-            if args.ori_topo:
-              output_curve_topo_embedding = self.curve_topo_embed(hs)
-            else:
+            if True:
               output_curve_topo_embedding_corner = self.curve_topo_embed_corner(hs)
               output_curve_topo_embedding_patch = self.curve_topo_embed_patch(hs)
               # output_curve_topo_embedding_patch = self.curve_topo_embed_corner(hs)
               
         if not args.no_topo:
-          if args.ori_topo:
-            out = {'pred_curve_logits': is_curve_valid_pred[-1], 'pred_curve_type': outputs_class[-1], 'pred_curve_points': sampled_points[-1], 'closed_curve_logits':is_curve_closed_logits[-1], 'curve_topo_embed': output_curve_topo_embedding[-1]}
-          else:
+          if True:
             out = {'pred_curve_logits': is_curve_valid_pred[-1], 'pred_curve_type': outputs_class[-1], 'pred_curve_points': sampled_points[-1], 'closed_curve_logits':is_curve_closed_logits[-1], 'curve_topo_embed_corner': output_curve_topo_embedding_corner[-1], 'curve_topo_embed_patch': output_curve_topo_embedding_patch[-1]}
           if self.aux_loss:
             out['aux_outputs'] = self._set_aux_loss(is_curve_valid_pred, outputs_class, sampled_points, is_curve_closed_logits, output_curve_topo_embedding)
@@ -1238,9 +1225,7 @@ class DETR_Patch_Tripath(nn.Module):
           self.patch_pe_y = self.patch_pe_x
 
         if not args.no_topo:
-          if args.ori_topo:
-            self.patch_topo_embed = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim, 3)
-          else:
+          if True:
             self.patch_topo_embed_curve = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim, 1)
             self.patch_topo_embed_corner = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim, 1)
         
@@ -1378,16 +1363,12 @@ class DETR_Patch_Tripath(nn.Module):
           if(args.normalize_embed_feature):
             output_patch_topo_embedding = F.normalize(self.patch_topo_embed(hs), dim=-1)
           else:
-            if args.ori_topo:
-              output_patch_topo_embedding = self.patch_topo_embed(hs)
-            else:
+            if True:
               output_patch_topo_embedding_curve = self.patch_topo_embed_curve(hs)
               output_patch_topo_embedding_corner = self.patch_topo_embed_corner(hs)
         
         if not args.no_topo:
-          if args.ori_topo:
-            out = {'pred_patch_logits': is_patch_valid_pred[-1], 'pred_patch_type': outputs_class[-1], 'pred_patch_points': sampled_points[-1], 'patch_topo_embed': output_patch_topo_embedding[-1]}
-          else:
+          if True:
             out = {'pred_patch_logits': is_patch_valid_pred[-1], 'pred_patch_type': outputs_class[-1], 'pred_patch_points': sampled_points[-1], 'patch_topo_embed_curve': output_patch_topo_embedding_curve[-1], 'patch_topo_embed_corner': output_patch_topo_embedding_corner[-1]}   
           if self.aux_loss:
             out['aux_outputs'] = self._set_aux_loss(is_patch_valid_pred, outputs_class, sampled_points, output_patch_topo_embedding)
@@ -1605,14 +1586,7 @@ def output_prediction(filename, corner_predictions, curve_predictions, patch_pre
     Result['curve_corner_correspondence_gt'] = gt_cc.numpy()
   #curve-corner topology
   if not args.no_topo:
-    if args.ori_topo:
-      corner_predictions_topo_embed = corner_predictions['corner_topo_embed'][sample_batch_idx] #in shape [100, 192]
-      curve_predictions_topo_embed = curve_predictions['curve_topo_embed'][sample_batch_idx] #in shape[100, 192]
-      patch_predictions_topo_embed = patch_predictions['patch_topo_embed'][sample_batch_idx] #in shape[100, 192]
-      Result['curve_corner_similarity'] = torch.sigmoid(torch.mm(curve_predictions_topo_embed, corner_predictions_topo_embed.transpose(0,1))).detach().cpu().numpy() #in shape [100, 100]
-      #patch-curve topology
-      Result['patch_curve_similarity'] = torch.sigmoid(torch.mm(patch_predictions_topo_embed, curve_predictions_topo_embed.transpose(0,1))).detach().cpu().numpy() #in shape [100, 100]
-    else:
+    if True:
       corner_predictions_topo_embed_curve = corner_predictions['corner_topo_embed_curve'][sample_batch_idx] #in shape [100, 192]
       curve_predictions_topo_embed_corner = curve_predictions['curve_topo_embed_corner'][sample_batch_idx] #in shape[100, 192]
       curve_predictions_topo_embed_patch = curve_predictions['curve_topo_embed_patch'][sample_batch_idx] #in shape[100, 192]
@@ -1661,10 +1635,7 @@ def Curve_Corner_Matching_tripath(corner_predictions, curve_predictions, corners
         zero_corners_examples += 1
         continue
       #compute pairwise dot product
-      if args.ori_topo:
-        corner_predictions_topo_embed = corner_predictions['corner_topo_embed'][i] #in shape [100, 192]
-        curve_predictions_topo_embed = curve_predictions['curve_topo_embed'][i] #in shape[100, 192]
-      else:
+      if True:
         corner_predictions_topo_embed = corner_predictions['corner_topo_embed_curve'][i] #in shape [100, 192]
         curve_predictions_topo_embed = curve_predictions['curve_topo_embed_corner'][i] #in shape[100, 192]
       
@@ -1842,10 +1813,7 @@ def Patch_Curve_Matching_tripath(curve_predictions, patch_predictions, curves_gt
       if(curves_gt[i]['labels'].shape[0] == 0):
         continue
       #compute pairwise dot product
-      if args.ori_topo:
-        curve_predictions_topo_embed = curve_predictions['curve_topo_embed'][i] #in shape [100, 256]
-        patch_predictions_topo_embed = patch_predictions['patch_topo_embed'][i] #in shape [100, 256]
-      else:
+      if True:
         curve_predictions_topo_embed = curve_predictions['curve_topo_embed_patch'][i] #in shape [100, 256]
         patch_predictions_topo_embed = patch_predictions['patch_topo_embed_curve'][i] #in shape [100, 256]
       
@@ -2098,23 +2066,6 @@ def Patch_Corner_Matching_tripath(corner_predictions, curve_predictions, patch_p
       pc_cc_m = torch.mm(patch_curve_similarity[:, open_curve_idx[0]], curve_corner_similarity[open_curve_idx[0]])
       assert(pc_cc_m.shape == patch_corner_similarity.shape)
       patch_close_loss.append((pc_cc_m - 2 * patch_corner_similarity).norm() / math.sqrt(patch_corner_similarity.shape[0] * patch_corner_similarity.shape[1]))
-      
-      if(False):
-        #debug
-        print("=============================================================")
-        print("corner_matching_indices")
-        print(cur_corner_indices)
-        print("curve_matching_indices")
-        print(cur_curve_indices)
-        print("gt curve-corner correspondences")
-        print("gt closed curve label")
-        print(open_curve_idx)
-        print("gt matrix supervision")
-        print(gt_curve_corner_correspondence)
-        print(curve_corner_similarity.shape)
-        print(gt_curve_corner_correspondence.shape)
-        print(curve_corner_similarity)
-        print("=============================================================")
     
     if not args.topo_acc:
       if(len(topo_correspondence_loss) != 0):
@@ -2126,251 +2077,6 @@ def Patch_Corner_Matching_tripath(corner_predictions, curve_predictions, patch_p
         return [sum(topo_correspondence_loss) / len(topo_correspondence_loss), sum(curve_point_loss) / len(curve_point_loss), sum(curve_patch_loss) / len(curve_patch_loss), sum(patch_close_loss) / len(patch_close_loss), sum(topo_correspondence_acc) / len(topo_correspondence_acc)]
       else:
         return [torch.tensor(0, device=corner_predictions['pred_logits'].device)] * 4 + [torch.tensor(100.0, device=corner_predictions['pred_logits'].device)]
-
-
-def Curve_Corner_Matching_v2(corner_predictions, curve_predictions, corners_gt, curves_gt, corner_indices, curve_indices):
-    #for samples in each batch seperately
-    assert(len(corners_gt) == args.batch_size)
-    assert(len(corners_gt) == len(curves_gt))
-    
-    topo_correspondence_loss = []
-    topo_geometry_loss = []
-    
-    device = corner_predictions['corner_topo_embed'].device
-    
-    zero_corners_examples = 0
-    for i in range(len(corners_gt)):
-      #no corners thus we do not have to compute
-      if(corners_gt[i].shape[0] == 0):
-        #print("zero corners", i)
-        zero_corners_examples += 1
-        continue
-      #compute pairwise dot product
-      corner_predictions_topo_embed = corner_predictions['corner_topo_embed'][i] #in shape [100, 192]
-      curve_predictions_topo_embed = curve_predictions['curve_topo_embed'][i] #in shape[100, 192]
-      
-      #select matched curve and corners
-      cur_corner_indices = corner_indices[i] #a tuple
-      cur_curve_indices = curve_indices[i] #a tuple
-      
-      corner_correspondence = torch.zeros_like(cur_corner_indices[0])
-      corner_correspondence[cur_corner_indices[1]] = cur_corner_indices[0]
-      
-      curve_correspondence = torch.zeros_like(cur_curve_indices[0])
-      curve_correspondence[cur_curve_indices[1]] = cur_curve_indices[0]
-      
-      valid_corner_predictions_topo_embed = corner_predictions_topo_embed[corner_correspondence]
-      valid_curve_predictions_topo_embed = curve_predictions_topo_embed[curve_correspondence]
-      
-      cur_curves_gt = curves_gt[i] #a dict
-      open_curve_idx = torch.where(cur_curves_gt['is_closed'] < 0.5)
-      
-      if(args.num_heads_dot > 1): #1
-        curve_corner_similarity = torch.sigmoid(torch.einsum("ahf,bhf->abh", (valid_curve_predictions_topo_embed[open_curve_idx]).view(-1, args.num_heads_dot, args.topo_embed_dim//args.num_heads_dot), valid_corner_predictions_topo_embed.view(-1, args.num_heads_dot, args.topo_embed_dim//args.num_heads_dot)).max(-1).values)
-      else:
-        curve_corner_similarity = torch.sigmoid(torch.mm(valid_curve_predictions_topo_embed[open_curve_idx], valid_corner_predictions_topo_embed.transpose(0,1))) #in shape [valid_open_curves, valid_corners]
-      #print(curve_corner_similarity)
-      #print(curve_corner_similarity.shape)        
-      gt_curve_corner_correspondence = torch.zeros(curve_corner_similarity.shape) #target supervision
-            
-      curve2corner_gt = cur_curves_gt['endpoints'][open_curve_idx]
-      '''
-      print(curve2corner_gt)
-      #write curves according to corner position and curve corner correspondences
-      with open("gt_tmp_curve.obj", "w") as tmp_obj_file:
-        for corner_position in corners_gt[i]:
-          tmp_obj_file.write("v {} {} {}\n".format(corner_position[0], corner_position[1], corner_position[2]))
-        for curve_endpoints in curve2corner_gt:
-          tmp_obj_file.write("l {} {}\n".format(curve_endpoints[0] +1, curve_endpoints[1]+1))
-      with open("pred_tmp_curve.obj", "w") as tmp_obj_file:
-        for corner_position in corner_correspondence:
-          tmp_obj_file.write("v {} {} {}\n".format(corner_predictions['pred_corner_position'][i][corner_position][0], corner_predictions['pred_corner_position'][i][corner_position][1], corner_predictions['pred_corner_position'][i][corner_position][2]))
-        for curve_endpoints in curve2corner_gt:
-          tmp_obj_file.write("l {} {}\n".format(curve_endpoints[0] +1, curve_endpoints[1]+1))
-      input()
-      '''
-      assert(len(open_curve_idx) == 1)
-      gt_curve_corner_correspondence[torch.arange(curve2corner_gt.shape[0]), curve2corner_gt[:,0]] = 1
-      gt_curve_corner_correspondence[torch.arange(curve2corner_gt.shape[0]), curve2corner_gt[:,1]] = 1
-      #print(gt_curve_corner_correspondence.sum()) #should = 2*n_curves
-            
-      curve_endpoints_position = curve_predictions['pred_curve_points'][i][:,[0, -1]]#[100, 34, 3] -> [100, 2, 3]
-      valid_curve_endpoints_position = curve_endpoints_position[curve_correspondence]
-      #print(valid_curve_endpoints_position.shape)#[n_curves, 2, 3]
-      
-      corner_position = corner_predictions['pred_corner_position'][i][corner_correspondence.to(device)] #!!!!!!
-      assert(len(corner_position.shape) == 2)
-      curve_corner_position = torch.cat([corner_position[curve2corner_gt[:,0]].unsqueeze(1), corner_position[curve2corner_gt[:,1]].unsqueeze(1)], axis=1)
-      curve_corner_position_rev = torch.cat([corner_position[curve2corner_gt[:,1]].unsqueeze(1), corner_position[curve2corner_gt[:,0]].unsqueeze(1)], axis=1)
-      assert(len(curve_corner_position.shape) == 3 and curve_corner_position.shape[1] == 2)
-      diff_forward = (valid_curve_endpoints_position[open_curve_idx] - curve_corner_position).square().sum(-1).mean(-1).view(-1, 1)
-      diff_backward = (valid_curve_endpoints_position[open_curve_idx] - curve_corner_position_rev).square().sum(-1).mean(-1).view(-1, 1)
-      
-      topo_geometry_loss.append(torch.cat([diff_forward, diff_backward], dim=1).min(-1).values.mean())      
-      topo_correspondence_loss.append(F.binary_cross_entropy(curve_corner_similarity.view(-1), gt_curve_corner_correspondence.to(corner_predictions['corner_topo_embed'].device).view(-1)))
-      
-      if(False):
-        #debug
-        print("=============================================================")
-        print("corner_matching_indices")
-        print(cur_corner_indices)
-        print("curve_matching_indices")
-        print(cur_curve_indices)
-        print("gt curve-corner correspondences")
-        print(cur_curves_gt['endpoints'])
-        print("gt closed curve label")
-        print(open_curve_idx)
-        print("gt matrix supervision")
-        print(gt_curve_corner_correspondence)
-        print(curve_corner_similarity.shape)
-        print(gt_curve_corner_correspondence.shape)
-        print(curve_corner_similarity)
-        print("=============================================================")
-      #print(curve_corner_similarity)
-      #print(gt_curve_corner_correspondence)
-    
-    if(len(topo_geometry_loss) != 0):
-      return sum(topo_geometry_loss) / len(topo_geometry_loss), sum(topo_correspondence_loss) / len(topo_correspondence_loss), zero_corners_examples == len(corners_gt)
-    else:
-      return torch.tensor(0, device=device), torch.tensor(0, device=device), zero_corners_examples == len(corners_gt)
-
-def Patch_Curve_Matching(curve_predictions, patch_predictions, curves_gt, patches_gt, curve_indices, patch_indices):
-    #for samples in each batch seperately
-    assert(len(patches_gt) == args.batch_size)
-    assert(len(patches_gt) == len(curves_gt))
-    
-    topo_correspondence_loss = []
-    
-    for i in range(len(patches_gt)):
-      #no curves exists thus we do not have to compute
-      if(curves_gt[i]['labels'].shape[0] == 0):
-        continue
-      #compute pairwise dot product
-      curve_predictions_topo_embed = curve_predictions['curve_topo_embed'][i] #in shape [100, 192]
-      patch_predictions_topo_embed = patch_predictions['patch_topo_embed'][i] #in shape [100, 192]
-      
-      #select matched curve and corners
-      cur_curve_indices = curve_indices[i] #a tuple
-      cur_patch_indices = patch_indices[i] #a tuple
-           
-      curve_correspondence = torch.zeros_like(cur_curve_indices[0])
-      curve_correspondence[cur_curve_indices[1]] = cur_curve_indices[0]
-      
-      patch_correspondence = torch.zeros_like(cur_patch_indices[0])
-      patch_correspondence[cur_patch_indices[1]] = cur_patch_indices[0]
-      
-      valid_patch_predictions_topo_embed = patch_predictions_topo_embed[patch_correspondence]
-      valid_curve_predictions_topo_embed = curve_predictions_topo_embed[curve_correspondence]
-            
-      if(args.num_heads_dot > 1):
-        patch_curve_similarity = torch.sigmoid(torch.einsum("ahf,bhf->abh", (valid_patch_predictions_topo_embed).view(-1, args.num_heads_dot, args.topo_embed_dim//args.num_heads_dot), valid_curve_predictions_topo_embed.view(-1, args.num_heads_dot, args.topo_embed_dim//args.num_heads_dot)).max(-1).values)
-      else:
-        patch_curve_similarity = torch.sigmoid(torch.mm(valid_patch_predictions_topo_embed, valid_curve_predictions_topo_embed.transpose(0,1))) #in shape [valid_open_curves, valid_corners]
-      #print(patch_curve_similarity)
-      #print(patch_curve_similarity.shape)        
-      gt_patch_curve_correspondence = torch.from_numpy(patches_gt[i]['patch_curve_correspondence'].astype(np.float32))
-      #print(gt_patch_curve_correspondence.sum()) #should = 2*n_curves
-      assert(gt_patch_curve_correspondence.shape == patch_curve_similarity.shape)
-      
-      topo_correspondence_loss.append(F.binary_cross_entropy(patch_curve_similarity.view(-1), gt_patch_curve_correspondence.to(curve_predictions['curve_topo_embed'].device).view(-1)))
-      
-      if(False):
-        #debug
-        print("=============================================================")
-        print("corner_matching_indices")
-        print(cur_corner_indices)
-        print("curve_matching_indices")
-        print(cur_curve_indices)
-        print("gt curve-corner correspondences")
-        print("gt closed curve label")
-        print(open_curve_idx)
-        print("gt matrix supervision")
-        print(gt_curve_corner_correspondence)
-        print(curve_corner_similarity.shape)
-        print(gt_curve_corner_correspondence.shape)
-        print(curve_corner_similarity)
-        print("=============================================================")
-    
-    if(len(topo_correspondence_loss) != 0):
-      return sum(topo_correspondence_loss) / len(topo_correspondence_loss)
-    else:
-      return torch.tensor(0, device=curve_predictions['curve_topo_embed'].device)
-
-
-def Curve_Corner_Matching(corner_predictions, curve_predictions, corners_gt, curves_gt, corner_indices, curve_indices):
-    #return Curve_Corner_Matching_v2(corner_predictions, curve_predictions, corners_gt, curves_gt, corner_indices, curve_indices)
-    #for samples in each batch seperately
-    assert(len(corners_gt) == args.batch_size)
-    assert(len(corners_gt) == len(curves_gt))
-    
-    topo_correspondence_loss = []
-    topo_geometry_loss = []
-    
-    for i in range(len(corners_gt)):
-      #no corners thus we do not have to compute
-      if(corners_gt[i].shape[0] == 0):
-        continue
-      #compute pairwise dot product
-      corner_predictions_topo_embed = corner_predictions['corner_topo_embed'][i] #in shape [100, 192]
-      curve_predictions_topo_embed = curve_predictions['curve_topo_embed'][i] #in shape[100, 192]
-      curve_corner_similarity = torch.sigmoid(torch.mm(curve_predictions_topo_embed, corner_predictions_topo_embed.transpose(0,1))) #in shape [100, 100]
-      #print(curve_corner_similarity)
-      #print(curve_corner_similarity.shape)
-      gt_curve_corner_correspondence = torch.zeros([args.num_curve_queries, args.num_corner_queries]) #target supervision
-      
-      cur_curves_gt = curves_gt[i] #a dict
-      cur_corner_indices = corner_indices[i] #a tuple
-      cur_curve_indices = curve_indices[i] #a tuple
-      
-      corner_correspondence = torch.zeros_like(cur_corner_indices[0])
-      corner_correspondence[cur_corner_indices[1]] = cur_corner_indices[0]
-      
-      curve_correspondence = torch.zeros_like(cur_curve_indices[0])
-      curve_correspondence[cur_curve_indices[1]] = cur_curve_indices[0]
-      
-      '''
-      print("corner")
-      print(cur_corner_indices)
-      print(corner_correspondence)
-      
-      print("curve")
-      print(cur_curve_indices)
-      print(curve_correspondence)
-      print("==================================")
-      '''
-      
-      open_curve_idx = torch.where(cur_curves_gt['is_closed'] < 0.5)
-      curve2corner_gt = corner_correspondence[cur_curves_gt['endpoints'][open_curve_idx].view(-1)].view(-1, 2)
-      open_curve_correspondence = curve_correspondence[open_curve_idx]
-            
-      gt_curve_corner_correspondence[open_curve_correspondence, curve2corner_gt[:,0]] = 1
-      gt_curve_corner_correspondence[open_curve_correspondence, curve2corner_gt[:,1]] = 1
-      #print(gt_curve_corner_correspondence.sum()) #should = 2*n_curves
-      
-      curve_endpoints_position = curve_predictions['pred_curve_points'][i][:,[0, -1]]#[100, 34, 3] -> [100, 2, 3]
-      valid_curve_endpoints_position = curve_endpoints_position[open_curve_correspondence]
-      #print(valid_curve_endpoints_position.shape)#[n_curves, 2, 3]
-      
-      valid_correspondence_mask = torch.zeros([args.num_curve_queries, args.num_corner_queries]) #target supervision
-      valid_correspondence_mask[open_curve_correspondence] += 1
-      valid_correspondence_mask[:, corner_correspondence] += 1
-      curve_corner_similarity *= (valid_correspondence_mask > 1.5).float().to(device)
-      gt_curve_corner_correspondence *= (valid_correspondence_mask > 1.5).float()
-      
-      
-      corner_position = corner_predictions['pred_corner_position'][i]
-      curve_corner_position = torch.cat([corner_position[curve2corner_gt[:,0]].unsqueeze(1), corner_position[curve2corner_gt[:,1]].unsqueeze(1)], axis=1)
-      curve_corner_position_rev = torch.cat([corner_position[curve2corner_gt[:,1]].unsqueeze(1), corner_position[curve2corner_gt[:,0]].unsqueeze(1)], axis=1)
-      diff_forward = (valid_curve_endpoints_position - curve_corner_position).square().sum(-1).mean(-1).view(-1, 1)
-      diff_backward = (valid_curve_endpoints_position - curve_corner_position_rev).square().sum(-1).mean(-1).view(-1, 1)
-      
-      topo_geometry_loss.append(torch.cat([diff_forward, diff_backward], dim=1).min(-1).values.mean())
-      topo_correspondence_loss.append(F.binary_cross_entropy(curve_corner_similarity.view(-1), gt_curve_corner_correspondence.to(device).view(-1), reduction='sum')/(len(open_curve_idx[0])*(corners_gt[i].shape[0])))
-    
-    if(len(topo_geometry_loss) != 0):
-      return torch.tensor(topo_geometry_loss).mean(), torch.tensor(topo_correspondence_loss).mean()
-    else:
-      return torch.tensor([0], device=device), torch.tensor([0], device=device)
 
 class SetCriterion_Corner(nn.Module):
     """ This class computes the loss for DETR-Corner.
@@ -4093,12 +3799,6 @@ def model_evaluation(model_shape, corner_loss_criterion, curve_loss_criterion, p
     
     if not args.no_topo:
       if(args.curve_corner_geom_loss_coef > 0 or args.curve_corner_topo_loss_coef > 0):
-        # curve_corner_matching_loss_geom, curve_corner_matching_loss_topo, all_zero_corners = \
-        #     Curve_Corner_Matching_v2(corner_predictions, curve_predictions, target_corner_points_list, target_curves_list, corner_matching_indices['indices'], curve_matching_indices['indices'])
-        # if args.ori_topo:
-        #   curve_corner_matching_loss_geom, curve_corner_matching_loss_topo, all_zero_corners = \
-        #     Curve_Corner_Matching_v2(corner_predictions, curve_predictions, target_corner_points_list, target_curves_list, corner_matching_indices['indices'], curve_matching_indices['indices'])
-        # else:
         curve_corner_matching_loss_geom, curve_corner_matching_loss_topo, all_zero_corners = \
           Curve_Corner_Matching_tripath(corner_predictions, curve_predictions, target_corner_points_list, target_curves_list, corner_matching_indices['indices'], curve_matching_indices['indices'], flag_round = True)
         if(sample_count == 1): print("with curve corner correspondence loss")
@@ -4114,39 +3814,19 @@ def model_evaluation(model_shape, corner_loss_criterion, curve_loss_criterion, p
         
         summary_loss_dict['corner_curve_topo'] = curve_corner_matching_loss_topo.cpu().detach().numpy()
         # summary_loss_dict['corner_curve_geom'] = args.curve_corner_geom_loss_coef*curve_corner_matching_loss_geom.cpu().detach().numpy()
-        if('aux_outputs' in corner_predictions):
-          assert('aux_outputs' in curve_predictions)
-          for aux_id in range(len(corner_matching_indices['aux_outputs'])):
-            curve_corner_matching_loss_geom_aux, curve_corner_matching_loss_topo_aux = \
-              Curve_Corner_Matching_v2(corner_predictions['aux_outputs'][aux_id], curve_predictions['aux_outputs'][aux_id], target_corner_points_list, target_curves_list, corner_matching_indices['aux_outputs'][aux_id]['indices'], curve_matching_indices['aux_outputs'][aux_id]['indices'])
-            # losses += args.curve_corner_geom_loss_coef*curve_corner_matching_loss_geom_aux + args.curve_corner_topo_loss_coef*curve_corner_matching_loss_topo_aux
-            #summary_loss_dict['corner_curve_topo_aux_'+str(aux_id)] = args.curve_corner_topo_loss_coef*curve_corner_matching_loss_topo_aux.cpu().detach().numpy()
       elif(sample_count == 1):
         print("without curve corner correspondence loss")
 
       if(args.patch_curve_topo_loss_coef > 0):
-        # patch_curve_matching_loss_topo = \
-        #     Patch_Curve_Matching(curve_predictions, patch_predictions, target_curves_list, target_patches_list, curve_matching_indices['indices'], patch_matching_indices['indices'])
-        # if args.ori_topo:
-        #   patch_curve_matching_loss_topo = \
-        #     Patch_Curve_Matching(curve_predictions, patch_predictions, target_curves_list, target_patches_list, curve_matching_indices['indices'], patch_matching_indices['indices'])
-        # else:
         patch_curve_matching_loss_topo, p2p_loss_topo = \
           Patch_Curve_Matching_tripath(curve_predictions, patch_predictions, target_curves_list, target_patches_list, curve_matching_indices['indices'], patch_matching_indices['indices'], flag_round = True)  
         # losses += args.patch_curve_topo_loss_coef*patch_curve_matching_loss_topo
         summary_loss_dict['patch_curve_topo'] = patch_curve_matching_loss_topo.cpu().detach().numpy()
         summary_loss_dict['patch_patch_topo'] = p2p_loss_topo
-        
-        if('aux_outputs' in corner_predictions):
-          assert('aux_outputs' in curve_predictions)
-          for aux_id in range(len(corner_matching_indices['aux_outputs'])):
-            patch_curve_matching_loss_topo_aux = \
-              Patch_Curve_Matching(curve_predictions['aux_outputs'][aux_id], patch_predictions['aux_outputs'][aux_id], target_curves_list, target_patches_list, curve_matching_indices['aux_outputs'][aux_id]['indices'], patch_matching_indices['aux_outputs'][aux_id]['indices'])
-            # losses += args.patch_curve_topo_loss_coef*patch_curve_matching_loss_topo_aux
       elif(sample_count == 1):
         print("without patch curve correspondence loss")
       
-      if (args.patch_corner_topo_loss_coef > 0 and not args.ori_topo):
+      if (args.patch_corner_topo_loss_coef > 0):
         patch_corner_matching_loss_topo, curve_point_loss, curve_patch_loss, patch_close_loss = \
           Patch_Corner_Matching_tripath(corner_predictions, curve_predictions, patch_predictions, target_corner_points_list, target_curves_list, target_patches_list, corner_matching_indices['indices'],curve_matching_indices['indices'], patch_matching_indices['indices'],flag_round = True)
       
@@ -5817,10 +5497,7 @@ def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterio
     if not args.no_topo:
       if(args.curve_corner_geom_loss_coef > 0 or args.curve_corner_topo_loss_coef > 0):
         if not args.topo_acc:
-          if args.ori_topo:
-            curve_corner_matching_loss_geom, curve_corner_matching_loss_topo, all_zero_corners = \
-              Curve_Corner_Matching_v2(corner_predictions, curve_predictions, target_corner_points_list, target_curves_list, corner_matching_indices['indices'], curve_matching_indices['indices'])
-          else:
+          if True:
             curve_corner_matching_loss_geom, curve_corner_matching_loss_topo, all_zero_corners = \
               Curve_Corner_Matching_tripath(corner_predictions, curve_predictions, target_corner_points_list, target_curves_list, corner_matching_indices['indices'], curve_matching_indices['indices'])
         else:
@@ -5842,20 +5519,9 @@ def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterio
 
         if args.topo_acc:
           summary_loss_dict['corner_curve_topoacc'] += curve_corner_topo_acc.detach()
-        if('aux_outputs' in corner_predictions):
-          assert('aux_outputs' in curve_predictions)
-          for aux_id in range(len(corner_matching_indices['aux_outputs'])):
-            curve_corner_matching_loss_geom_aux, curve_corner_matching_loss_topo_aux = \
-              Curve_Corner_Matching_v2(corner_predictions['aux_outputs'][aux_id], curve_predictions['aux_outputs'][aux_id], target_corner_points_list, target_curves_list, corner_matching_indices['aux_outputs'][aux_id]['indices'], curve_matching_indices['aux_outputs'][aux_id]['indices'])
-            losses += args.curve_corner_geom_loss_coef*curve_corner_matching_loss_geom_aux + args.curve_corner_topo_loss_coef*curve_corner_matching_loss_topo_aux
-            #summary_loss_dict['corner_curve_topo_aux_'+str(aux_id)] = args.curve_corner_topo_loss_coef*curve_corner_matching_loss_topo_aux.cpu().detach().numpy()
-
       if(args.patch_curve_topo_loss_coef > 0):
         if not args.topo_acc:
-          if args.ori_topo:
-            patch_curve_matching_loss_topo = \
-              Patch_Curve_Matching(curve_predictions, patch_predictions, target_curves_list, target_patches_list, curve_matching_indices['indices'], patch_matching_indices['indices'])
-          else:
+          if True:
             patch_curve_matching_loss_topo = \
               Patch_Curve_Matching_tripath(curve_predictions, patch_predictions, target_curves_list, target_patches_list, curve_matching_indices['indices'], patch_matching_indices['indices'])    
         else:
@@ -5865,13 +5531,7 @@ def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterio
         summary_loss_dict['patch_curve_topo'] += args.patch_curve_topo_loss_coef*patch_curve_matching_loss_topo.detach()
         if args.topo_acc:
           summary_loss_dict['patch_curve_topoacc'] += patch_curve_topo_acc.detach()
-        if('aux_outputs' in corner_predictions):
-          assert('aux_outputs' in curve_predictions)
-          for aux_id in range(len(corner_matching_indices['aux_outputs'])):
-            patch_curve_matching_loss_topo_aux = \
-              Patch_Curve_Matching(curve_predictions['aux_outputs'][aux_id], patch_predictions['aux_outputs'][aux_id], target_curves_list, target_patches_list, curve_matching_indices['aux_outputs'][aux_id]['indices'], patch_matching_indices['aux_outputs'][aux_id]['indices'])
-            losses += args.patch_curve_topo_loss_coef*patch_curve_matching_loss_topo_aux
-
+        
       #to be added for evaluation
       if (args.patch_corner_topo_loss_coef > 0):
         if not args.topo_acc:
@@ -6451,9 +6111,7 @@ def pipeline_abc(rank, world_size):
   
   param_dicts = [{"params": [p for n, p in model_without_ddp.named_parameters() if p.requires_grad]}]
   
-  if args.ori_topo:
-    corner_topo_params = {n:p for n, p in model_without_ddp.named_parameters() if p.requires_grad and 'corner_model.corner_topo_embed' in n}
-  else:
+  if True:
     corner_topo_params = {n:p for n, p in model_without_ddp.named_parameters() if p.requires_grad and ('corner_model.corner_topo_embed_curve' in n or 'curve_model.curve_topo_embed_corner' in n or 'corner_model.corner_topo_embed_patch' in n or 'patch_model.patch_topo_embed_corner' in n)}
   corner_geometry_params = {n:p for n, p in model_without_ddp.named_parameters() if p.requires_grad and 'corner_model.corner_position_embed' in n}
   #print(corner_topo_params)
@@ -6656,14 +6314,10 @@ def pipeline_abc(rank, world_size):
       if not args.no_topo:
         if(args.curve_corner_geom_loss_coef > 0 or args.curve_corner_topo_loss_coef > 0):
           if not args.topo_acc:
-            if args.ori_topo:
-              curve_corner_matching_loss_geom, curve_corner_matching_loss_topo, all_zero_corners = \
-                Curve_Corner_Matching_v2(corner_predictions, curve_predictions, target_corner_points_list, target_curves_list, corner_matching_indices['indices'], curve_matching_indices['indices'])
-            else:
+            if True:
               curve_corner_matching_loss_geom, curve_corner_matching_loss_topo, all_zero_corners = \
                 Curve_Corner_Matching_tripath(corner_predictions, curve_predictions, target_corner_points_list, target_curves_list, corner_matching_indices['indices'], curve_matching_indices['indices'])   
           else:
-            #not consider ori_topo
             curve_corner_matching_loss_geom, curve_corner_matching_loss_topo, all_zero_corners, curve_corner_topo_acc = \
               Curve_Corner_Matching_tripath(corner_predictions, curve_predictions, target_corner_points_list, target_curves_list, corner_matching_indices['indices'], curve_matching_indices['indices']) 
           losses += args.curve_corner_geom_loss_coef*curve_corner_matching_loss_geom + args.curve_corner_topo_loss_coef*curve_corner_matching_loss_topo
@@ -6673,21 +6327,12 @@ def pipeline_abc(rank, world_size):
             summary_loss_dict['corner_curve_geom'] = args.curve_corner_geom_loss_coef*curve_corner_matching_loss_geom.detach()
             if args.topo_acc:
               summary_loss_dict['corner_curve_topoacc'] = curve_corner_topo_acc.detach()
-          if('aux_outputs' in corner_predictions):
-            assert('aux_outputs' in curve_predictions)
-            for aux_id in range(len(corner_matching_indices['aux_outputs'])):
-              curve_corner_matching_loss_geom_aux, curve_corner_matching_loss_topo_aux, _ = \
-                Curve_Corner_Matching_v2(corner_predictions['aux_outputs'][aux_id], curve_predictions['aux_outputs'][aux_id], target_corner_points_list, target_curves_list, corner_matching_indices['aux_outputs'][aux_id]['indices'], curve_matching_indices['aux_outputs'][aux_id]['indices'])
-              losses += args.curve_corner_geom_loss_coef*curve_corner_matching_loss_geom_aux + args.curve_corner_topo_loss_coef*curve_corner_matching_loss_topo_aux
         elif(train_iter == 0 and rank == 0):
           print("without curve corner correspondence loss")
         
         if(args.patch_curve_topo_loss_coef > 0):
           if not args.topo_acc:
-            if args.ori_topo:
-              patch_curve_matching_loss_topo = \
-                Patch_Curve_Matching(curve_predictions, patch_predictions, target_curves_list, target_patches_list, curve_matching_indices['indices'], patch_matching_indices['indices'])
-            else:
+            if True:
               patch_curve_matching_loss_topo = \
                 Patch_Curve_Matching_tripath(curve_predictions, patch_predictions, target_curves_list, target_patches_list, curve_matching_indices['indices'], patch_matching_indices['indices'])
           else:
@@ -6699,12 +6344,6 @@ def pipeline_abc(rank, world_size):
             summary_loss_dict['patch_curve_topo'] = args.patch_curve_topo_loss_coef*patch_curve_matching_loss_topo.detach()
             if args.topo_acc:
               summary_loss_dict['patch_curve_topoacc'] = patch_curve_topo_acc.detach()
-          if('aux_outputs' in corner_predictions):
-            assert('aux_outputs' in curve_predictions)
-            for aux_id in range(len(corner_matching_indices['aux_outputs'])):
-              patch_curve_matching_loss_topo_aux = \
-                Patch_Curve_Matching(curve_predictions['aux_outputs'][aux_id], patch_predictions['aux_outputs'][aux_id], target_curves_list, target_patches_list, curve_matching_indices['aux_outputs'][aux_id]['indices'], patch_matching_indices['aux_outputs'][aux_id]['indices'])
-              losses += args.patch_curve_topo_loss_coef*patch_curve_matching_loss_topo_aux
         elif(train_iter == 0 and rank == 0):
           print("without patch curve correspondence loss")
 
