@@ -158,7 +158,7 @@ To conduct geometric refinement for all models, please first modify _.\scripts\g
 If you are processing noisy/partial data, please replace the second command with:
         $ python .\scripts\geometric_refine.py --noise
 
-You will find the generate json files under 'complex_path'. The description of json file can be found  [here](docs/geometric_refine_json_description.md)
+You will find the generate json files under 'complex_path'. The description of json file can be found  [here](docs/geometric_refinement_json_description.md)
 
 ## Evaluation
 
