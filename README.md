@@ -56,7 +56,7 @@ ComplexGen
 *_extraction.complex: Output of 'complex extraction' phase
 *_geom_refine.json: Output of 'geometric refinement' phase, which is also the final output.
 ```
-The description and visualization of each file type can be found in [pickle description](docs/network_prediction_pickle_description.md), [complex description](docs/complex_extraction_complex_description.md) and [json description](docs/geometric_refinement_json_description.md). If you want to directly evaluate the provided output data of ComplexGen, please put the extracted _experiments_ folder under root folder _ComplexGen_, and conduct [Environment setup](https://github.com/guohaoxiang/ComplexGen/edit/main/README.md#phase-1-complexnet-prediction) and [Evaluation](https://github.com/guohaoxiang/ComplexGen/edit/main/README.md#phase-1-complexnet-prediction)
+The description and visualization of each file type can be found in [pickle description](docs/network_prediction_pickle_description.md), [complex description](docs/complex_extraction_complex_description.md) and [json description](docs/geometric_refinement_json_description.md). If you want to directly evaluate the provided output data of ComplexGen, please put the extracted _experiments_ folder under root folder _ComplexGen_, and conduct [Environment setup](https://github.com/guohaoxiang/ComplexGen#environment-setup-with-docker) and [Evaluation](https://github.com/guohaoxiang/ComplexGen#evaluation)
 
 ## Phase 1: ComplexNet prediction
 
@@ -156,6 +156,7 @@ To conduct geometric refinement for all models, please first modify _.\scripts\g
         $ python .\scripts\geometric_refine.py
 
 If you are processing noisy/partial data, please replace the second command with:
+
         $ python .\scripts\geometric_refine.py --noise
 
 You will find the generate json files under 'complex_path'. The description of json file can be found  [here](docs/geometric_refinement_json_description.md)
