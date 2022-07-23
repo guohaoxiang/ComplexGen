@@ -1,6 +1,6 @@
 ### complex file description
 
-Each complex file stores the geometric information and topological connectivity of a complex, and can be visualized following [here](https://github.com/guohaoxiang/ComplexGen#visualization)
+Each complex file stores the geometric information and topological connectivity of a complex, and can be visualized following [here](https://github.com/guohaoxiang/ComplexGen#visualization).
 
 **2rd line**: _num\_corners, num\_curves, num\_patchs_.
 
