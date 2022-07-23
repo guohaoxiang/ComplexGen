@@ -41,21 +41,11 @@ th_sol = 1e-4
 
 th_valid = args.th_valid
 
-# th_nms_dist = 0.02 #merging threshold, 1230
 th_nms_dist = 0.1 #merging threshold
 th_nms_dist_patch = 0.03 #merging threshold for patch, smaller value
 
-# th_valid = 0.01
 max_time = 599.0
-# max_time = 5.0
 
-
-#default
-# d = 0.2 #curvecorner
-# d_patch_curve = 0.1
-# d_patch_corner = 0.2
-
-#update 0114
 d = 0.1 #curvecorner
 d_patch_curve = 0.1
 d_patch_corner = 0.1
@@ -100,311 +90,10 @@ flag_mosek = True
 # flag_int = False
 flag_int = True
 
-def programming(data):
-  sample_id = data['sample_id']
-  print("working on case {}".format(sample_id))
-  
-  #primitives
-  corners = data['corners']['prediction']
-  curves = data['curves']['prediction']
-  patches = data['patches']['prediction']
-  
-  curve_corner_similarity = data['curve_corner_similarity']
-  patch_curve_similarity = data['patch_curve_similarity']
-  patch_corner_similarity = (np.clip(np.matmul(patch_curve_similarity, curve_corner_similarity) / 2.0, a_min=0, a_max=1) > 0.5).astype(np.float32)
-  print(patch_corner_similarity.min(), patch_corner_similarity.max())
-  # input()
-  
-  valid_corners = []
-  valid_curves = []
-  for i in range(100):
-    if(corners['valid_prob'][i] > 0.5):
-      valid_corners.append((i, corners['valid_prob'][i]))
-  
-  for i in range(100):
-    if(curves['valid_prob'][i] > 0.5):
-      valid_curves.append((i, curves['valid_prob'][i]))
-  
-  print("{} valid corners".format(len(valid_corners)))
-  # print(valid_corners)
-  print("{} valid curves".format(len(valid_curves)))
-  # print(valid_curves)
-  
-  export_corners("predict_corner.xyz", corners, np.where(corners['valid_prob'] > 0.5))
-  export_curves("predict_curves.obj", curves['points'][np.where(curves['valid_prob'] > 0.5)])
-  export_patches(patches['points'][np.where(patches['valid_prob'] > 0.5)], "predict_patches.obj")
-  export_patches(patches['points'][np.where(patches['valid_prob'] > 0.0)], "predict_patches_all.obj")
-
-  
-  assert(curve_corner_similarity.shape == patch_curve_similarity.shape)
-  # already mulified in merging step
-  # for i in range(curve_corner_similarity.shape[0]): #curve_id
-  #   for j in range(curve_corner_similarity.shape[1]): #corner_id
-  #     curve_corner_similarity[i][j] *= corners['valid_prob'][j] * curves['valid_prob'][i] * (1 - curves['closed_prob'][i])
-      
-  # for i in range(patch_curve_similarity.shape[0]): #patch_id
-  #   for j in range(patch_curve_similarity.shape[1]): #curve_id
-  #     patch_curve_similarity[i][j] *= patches['valid_prob'][i] * curves['valid_prob'][j]
-  
-  valid_curve_corner_similarity = curve_corner_similarity[np.where(curves['valid_prob'] > 0.5)][:,  np.where(corners['valid_prob'] > 0.5)]
-  print(valid_curve_corner_similarity)
-  print(valid_curve_corner_similarity.sum(axis=-1))
-  
-  fixed_variable_set = 'PC'
-  
-  corners_valid_prob = corners['valid_prob']
-  curves_valid_prob = curves['valid_prob']
-  patches_valid_prob = patches['valid_prob']
-  open_curve_prob = 1 - curves['closed_prob']
-
-  #enlarge numbers
-  if flag_enlarge:
-    corners_valid_prob = enlarge_factor * corners_valid_prob
-    curves_valid_prob = enlarge_factor * corners_valid_prob
-    patches_valid_prob = enlarge_factor * corners_valid_prob
-    open_curve_prob = enlarge_factor * corners_valid_prob
-    patch_curve_similarity = enlarge_factor * patch_curve_similarity
-    curve_corner_similarity = enlarge_factor * curve_corner_similarity
-    patch_corner_similarity = enlarge_factor * patch_corner_similarity
-  
-  #variables
-  c = np.zeros(300+100+30000, dtype=np.float32) #curve-corner patch-corner patch-curve
-  
-  #inequalities
-  A_ub = np.zeros([60500, c.shape[0]])
-  b_ub = np.zeros(A_ub.shape[0]) #rhs
-  
-  A_eq = np.zeros([10200, c.shape[0]])
-  b_eq = np.zeros(A_eq.shape[0])
-  
-  for iter in range(4):
-    print("iter", iter)
-    assert(fixed_variable_set == 'CC' or fixed_variable_set == 'PC')
-    
-    #fill objective
-    c[:100] = corners_valid_prob
-    c[100:200] = curves_valid_prob
-    c[200:300] = patches_valid_prob
-    c[300:10300] = np.reshape(curve_corner_similarity, [-1])
-    c[20300:30300] = np.reshape(patch_curve_similarity, [-1])
-    if not flag_enlarge:
-      c[30300:] = open_curve_prob*curves_valid_prob
-    else:
-      c[30300:] = open_curve_prob*curves_valid_prob / enlarge_factor
-    c[10300:20300] = np.reshape(patch_corner_similarity, [-1])
-    
-    c = 1 - c*2
-    
-    
-    #constraints
-    A_ub[:] = 0
-    b_ub[:] = 0
-    
-    cur_row = 0
-    for i in range(100): #curve
-      for j in range(100): #corner
-        #EV(i, j) < E(i)
-        A_ub[cur_row][100+i] = -1
-        A_ub[cur_row][300+100*i+j] = 1
-        cur_row += 1
-        
-        #EV(i, j) < V(j)
-        A_ub[cur_row][j] = -1
-        A_ub[cur_row][300+100*i+j] = 1
-        cur_row += 1
-    
-    
-    for i in range(100): #patch
-      for j in range(100): #curve
-        #FE(i,j) < F(i)
-        A_ub[cur_row][200+i] = -1
-        A_ub[cur_row][20300+100*i+j] = 1
-        cur_row += 1
-        
-        #FE(i,j) < E(j)
-        A_ub[cur_row][100+j] = -1
-        A_ub[cur_row][20300+100*i+j] = 1
-        cur_row += 1
-    
-    for i in range(100): #patch
-      for j in range(100): #corner
-        #FV(i,j) < F(i)
-        A_ub[cur_row][200+i] = -1
-        A_ub[cur_row][10300+100*i+j] = 1
-        cur_row += 1
-        #FV(i,j) < V(j)
-        A_ub[cur_row][j] = -1
-        A_ub[cur_row][10300+100*i+j] = 1
-        cur_row += 1
-    
-    for i in range(100): #corner
-      A_ub[cur_row][i] = 1
-      #V(i) < sigma EV
-      for j in range(100): #curve
-        A_ub[cur_row][300+100*j+i] = -1
-      cur_row += 1
-    
-    for i in range(100): #patch
-      A_ub[cur_row][200+i] = 1
-      #F(i) < sigma FE
-      for j in range(100): #curve
-        A_ub[cur_row][20300+100*i+j] = -1
-      cur_row += 1
-    
-    for i in range(100): #patch
-      A_ub[cur_row][200+i] = 1
-      #F(i) < sigma FV, strange
-      for j in range(100): #corner
-        A_ub[cur_row][10300+100*i+j] = -1
-      cur_row += 1
-    
-    for i in range(100): #corner
-      A_ub[cur_row][i] = 1
-      #V(i) < sigma FV
-      for j in range(100): #patch
-        A_ub[cur_row][10300+100*j+i] = -1
-      cur_row += 1
-    
-    #curve open_prob < valid_prob
-    for i in range(100):
-      #O < E
-      A_ub[cur_row][100+i] = -1
-      A_ub[cur_row][30300+i] = 1
-      cur_row += 1
-    
-    assert(cur_row == A_ub.shape[0])
-    
-    #equalities
-    A_eq[:] = 0
-    b_eq[:] = 0
-    cur_row = 0
-    #curve patch constraints (every curve has 2 patch)
-    for i in range(100): #curve
-      A_eq[cur_row][100+i] = 2
-      for j in range(100): #patch
-        A_eq[cur_row][20300+100*j+i] = -1
-      cur_row += 1
-    
-    #curve - 2 corner constraints
-    for i in range(100): #curve
-      A_eq[cur_row][30300+i] = 2 #no validness
-      for j in range(100): #corner
-        A_eq[cur_row][300+ 100*i +j] = -1
-      cur_row += 1
-    
-    #FE*EC = 2 *FC
-    for i in range(100): #patch
-      for j in range(100): #corner
-        A_eq[cur_row][10300 + 100*i + j] = -2
-        for k in range(100): #curve
-          #2 * patch_corner[i][j] = \sum patch_curve[i][k] * curve_corner[k][j]
-          if not flag_enlarge:
-            if(fixed_variable_set == 'CC'):
-              A_eq[cur_row][20300+100*i+k] = curve_corner_similarity[k][j]
-            else:
-              A_eq[cur_row][300+100*k+j] = patch_curve_similarity[i][k]
-          else:
-            if(fixed_variable_set == 'CC'):
-              A_eq[cur_row][20300+100*i+k] = curve_corner_similarity[k][j] / enlarge_factor
-            else:
-              A_eq[cur_row][300+100*k+j] = patch_curve_similarity[i][k] / enlarge_factor
-        cur_row += 1
-    
-    assert(cur_row == A_eq.shape[0])
-    
-    print("Solving Linear Programming")
-    t0 = time.time()
-    # res = linprog(c, A_ub, b_ub, A_eq, b_eq, bounds=(0,1), method='highs-ipm', options={'disp':True, 'dual_feasibility_tolerance':1e-16, 'primal_feasibility_tolerance':1e-16})
-    
-    #for model 06
-    # res = linprog(c, A_ub, b_ub, A_eq, b_eq, bounds=(0,1), method='highs-ipm', options={'disp':True, 'dual_feasibility_tolerance':1e-7, 'primal_feasibility_tolerance':1.25e-8})
-    # res = linprog(c, A_ub, b_ub, A_eq, b_eq, bounds=(0,1), method='highs-ipm', options={'disp':True, 'dual_feasibility_tolerance':1e-7, 'primal_feasibility_tolerance':1.25e-8, 'ipm_optimality_tolerance':1e-7})
-    if not flag_sparse:
-      res = linprog(c, A_ub, b_ub, A_eq, b_eq, bounds=(0,1), method='highs-ipm', options={'disp':True})
-    else:
-      A_ub_sparse = csr_matrix(A_ub)
-      A_eq_sparse = csr_matrix(A_eq)
-      # print('A ub sparse', A_ub_sparse)
-      res = linprog(c, A_ub_sparse, b_ub, A_eq_sparse, b_eq, bounds=(0,1), method='highs-ipm', options={'disp':True})
-
-
-    # res = linprog(c, A_ub, b_ub, A_eq, b_eq, bounds=(0,1), method='interior-point', options={'disp':True, 'dual_feasibility_tolerance':1e-16, 'primal_feasibility_tolerance':1e-16})
-    
-    t1 = time.time()
-    #failed due to some reason
-    x = res.x
-    # print(res)
-
-    if flag_enlarge:
-      x = x / enlarge_factor
-
-    print(x.min(), x.max())
-    assert(x.shape[0] == c.shape[0])
-    print((t1-t0), "s elapsed in iteration", iter)
-    
-    curve_corner_similarity = np.reshape(x[300:10300], [100, 100])    
-    patch_curve_similarity = np.reshape(x[20300:30300], [100, 100])
-
-    
-    if fixed_variable_set == 'CC':
-      fixed_variable_set = 'PC'
-    else:
-      fixed_variable_set = 'CC'
-  corners_valid_prob = x[:100]
-  curves_valid_prob = x[100:200]
-  patches_valid_prob = x[200:300]
-  # print(np.where(corners_valid_prob > 0.5))
-  # print(corners_valid_prob[np.where(corners_valid_prob > 0.5)])
-  # print(np.where(corners_valid_prob > 0.5)[0].shape)
-  
-  print('curve info')
-  print(np.where(curves_valid_prob > 0.5))
-  print(curves_valid_prob[np.where(curves_valid_prob > 0.5)])
-  print(np.where(curves_valid_prob > 0.5)[0].shape)
-  
-  # print(np.where(patches_valid_prob > 0.5))
-  # print(patches_valid_prob[np.where(patches_valid_prob > 0.5)])
-  # print(np.where(patches_valid_prob > 0.5)[0].shape)
-  
-  #valid_patch_curve = np.where(patch_curve_similarity > 0.5)
-  #valid_curve_corner = np.where(patch_curve_similarity > 0.5)
-  export_corners("opt_corner.xyz", corners, np.where(corners_valid_prob > 0.5))
-  export_curves("opt_curves.obj", curves['points'][np.where(curves_valid_prob > 0.5)])
-  export_patches(patches['points'][np.where(patches_valid_prob > 0.5)], "opt_patches.obj")
-  # print(curve_corner_similarity[52][np.where(corners_valid_prob > 0.5)])
-  # print(curve_corner_similarity[52].sum())
-  
-  # print(patch_curve_similarity[:, 52])
-  
-  valid_curve_corner_similarity = curve_corner_similarity[np.where(curves_valid_prob > 0.5)][:,  np.where(corners_valid_prob > 0.5)]
-  # print(valid_curve_corner_similarity)
-  print("curve_corner info")
-  print(valid_curve_corner_similarity.sum(axis=-1))
-  
-  # valid_patch_corner_similarity = np.reshape(x[10300:20300], [100, 100])[np.where(patches_valid_prob > 0.5)][:, np.where(corners_valid_prob > 0.5)]
-  # print(valid_patch_corner_similarity)
-  
-  open_curve_prob = x[30300:]
-  print('valid open curve')
-  print(open_curve_prob[np.where(curves_valid_prob > 0.5)])
-  print(open_curve_prob[np.where(curves_valid_prob > 0.5)].shape)
-  data['curve_corner_similarity'] = curve_corner_similarity
-  data['patch_curve_similarity'] = patch_curve_similarity
-  #update open closeness
-  curves['closed_prob'] = 1 - open_curve_prob
-  corners['valid_prob'] = corners_valid_prob
-  curves['valid_prob'] = curves_valid_prob
-  patches['valid_prob'] = patches_valid_prob
-
-  # export_visualization_file(str(data['sample_id'])+"_opt.complex", data)
-
-
 d = 0.2 #curvecorner
 d_patch_curve = 0.1
 d_patch_corner = 0.2
 def get_curve_corner_similarity_geom(data, flag_exp = True):
-  # sim = np.zeros([100,100])
-  # all_pts = data['corners']['gt'].cpu().numpy()
   all_pts = data['corners']['prediction']['position']
   all_e1 = data['curves']['prediction']['points'][:,0:1,:]
   all_e2 = data['curves']['prediction']['points'][:,-1:,:]
@@ -414,13 +103,6 @@ def get_curve_corner_similarity_geom(data, flag_exp = True):
   all_e2_diff = all_e2 - all_pts
   all_e1_dist = np.linalg.norm(all_e1_diff, axis = -1)
   all_e2_dist = np.linalg.norm(all_e2_diff, axis = -1)
-  # print('all e1 dist shape: ', all_e1_dist.shape)
-  # all_min_dist = np.array([np.min(all_e1_dist, axis = -1), np.min(all_e2_dist, axis = -1)])
-  # print('all dist shape: ', all_min_dist.shape)
-  # print('avg: {:.06f} min: {:.06f} max: {:.06f}'.format(np.average(all_min_dist), np.min(all_min_dist), np.max(all_min_dist)))
-  # d_coeff = 1
-  # d_coeff = 10000000
-  # d = np.average(all_min_dist) * d_coeff
   all_curve_corner_dist = np.min(np.array([all_e2_dist, all_e1_dist]),axis = 0)
   # print('all_curve_corner_dist shape: ', all_curve_corner_dist.shape)
   if flag_exp:
@@ -428,18 +110,9 @@ def get_curve_corner_similarity_geom(data, flag_exp = True):
   else:
     sim = all_curve_corner_dist
 
-  # datac = copy.deepcopy(data)
-  # datac['curve_corner_similarity'] = sim
-  # export_visualization_file("curve_corner_similarity_geom.complex", datac)
-  
-
   return sim
 
-
-
 def get_patch_curve_similarity_geom(data, flag_exp = True):
-  # sim = np.zeros([100,100])
-  # all_corner_pts = data['corners']['gt'].cpu().numpy()
   all_curve_pts = data['curves']['prediction']['points']
   all_patch_pts = data['patches']['prediction']['points']
   nf = all_patch_pts.shape[0]
@@ -453,19 +126,13 @@ def get_patch_curve_similarity_geom(data, flag_exp = True):
       sim[i,j] = np.mean(pts_dist.min(-1))
   if flag_exp:
     sim = np.exp(-sim * sim / (d_patch_curve * d_patch_curve))
-  # datac = copy.deepcopy(data)
-  # datac['patch_curve_similarity'] = sim
-  # export_visualization_file("patch_curve_similarity_geom.complex", datac)
   
   return sim
 
 def get_patch_corner_similarity_geom(data, flag_exp = True):
-  # sim = np.zeros([100,100])
   all_corner_pts = data['corners']['prediction']['position']
-  # all_curve_pts = data['curves']['prediction']['points']
   all_patch_pts = data['patches']['prediction']['points']
   nf = all_patch_pts.shape[0]
-  # nc = all_curve_pts.shape[0]
   nv = all_corner_pts.shape[0]
   sim = np.zeros([nf, nv])
   for i in range(nf):
@@ -492,7 +159,6 @@ flag_opt_type = args.type #0: ori, 1, mix, 2, geom, 3: mul
 if args.geom_con:
   flag_opt_type = 0
 
-# weight_open = 30.0
 weight_open = 10.0 #origin version in paper
 
 weight_unary = 10.0
@@ -501,8 +167,6 @@ weight_topo  = 10.0 #only used when normalized
 
 flag_debug = False
 flag_remove_extra_constraints = True #set to true if you want to remove extra constraints
-
-# flag_normalize = not args.no_normalize
 
 flag_normalize = False #not normalize by default.
 inf = 0.0
@@ -1488,7 +1152,6 @@ def programming_ilp(data_input):
   
   return True
   #curve corner
-  # np.savetxt('curvecorner_data.txt', data_input['curve_corner_similarity'][init_valid_curve_id][:,init_valid_corner_id].squeeze())
 
 def merge_duplicated_primitives(data, flag_merge = True):
   sample_id = data['sample_id']
@@ -1502,8 +1165,6 @@ def merge_duplicated_primitives(data, flag_merge = True):
   curve_corner_similarity = data['curve_corner_similarity']
   patch_curve_similarity = data['patch_curve_similarity']
   patch_corner_similarity = data['patch_corner_similarity'].astype(dtype)
-  #patch_corner_similarity = (np.clip(np.matmul(patch_curve_similarity, curve_corner_similarity) / 2.0, a_min=0, a_max=1) > 0.5).astype(np.float32)
-  #print(patch_corner_similarity.min(), patch_corner_similarity.max())
   
   #data modified here
   assert(curve_corner_similarity.shape == patch_curve_similarity.shape)
@@ -1520,14 +1181,10 @@ def merge_duplicated_primitives(data, flag_merge = True):
     for j in range(patch_corner_similarity.shape[1]):
       patch_corner_similarity[i][j] *= patches['valid_prob'][i] * corners['valid_prob'][j]
   #first find duplicated corners
-  # print("first find duplicated corners")
   while(flag_merge):
-  # while(False):
     curve_corner_matching = (curve_corner_similarity > 0.5).astype(np.int32)
-    #find if a curve has more than 2 matching corners
     conflict_curve_idx = np.where(curve_corner_matching.sum(axis=-1) > 2)[0]
     print(conflict_curve_idx)
-    
     if(conflict_curve_idx.shape[0] == 0):
       break
     
@@ -1547,37 +1204,6 @@ def merge_duplicated_primitives(data, flag_merge = True):
     print(corners['valid_prob'][min_pair[0]])
     curve_corner_similarity[:, min_pair[0]] = 0
   return data
-  
-  #nind duplicated patches
-  print("find duplicated patches")
-  while(True):
-    patch_curve_matching = (patch_curve_similarity > 0.5).astype(np.int32)
-    #find if a curve has more than 2 matching patches
-    conflict_curve_idx = np.where(patch_curve_matching.sum(axis=0) > 2)[0]
-    print(conflict_curve_idx)
-    
-    if(conflict_curve_idx.shape[0] == 0):
-      break
-    
-    potential_duplicate_patches = np.where(patch_curve_similarity[:, conflict_curve_idx[0]] > 0.5)[0]
-    min_value = 1e10
-    min_pair = None
-    for i in range(potential_duplicate_patches.shape[0]):
-      for j in range(i+1, potential_duplicate_patches.shape[0]):
-        patch1 = potential_duplicate_patches[i]
-        patch2 = potential_duplicate_patches[j]
-        cur_diff = np.square(patch_curve_similarity[patch1] - patch_curve_similarity[patch2]).sum()
-        if(cur_diff < min_value):
-          min_value = cur_diff
-          min_pair = (patch1, patch2)
-          print(min_value, min_pair)
-    data['patches']['prediction']['valid_prob'][min_pair[0]] = 0
-    patch_curve_similarity[min_pair[0]] = 0
-  
-  
-  return data
-
-
 
 
 def chamfer_distance(x, y, metric='l2', direction='bi'):
@@ -1643,14 +1269,8 @@ def NMS_patch(data):
   for i in range(n_patch - 1):
     if patches['valid_prob'][i] > th_valid:
       for j in range(i + 1, n_patch):
-        # tmp_chamfer = chamfer_distance(patch_pts[i], patch_pts[j])
-        # alldists.append(tmp_chamfer)
         tmp_chamfer_xy = chamfer_distance(patch_pts[i], patch_pts[j], direction='x_to_y')
         tmp_chamfer_yx = chamfer_distance(patch_pts[i], patch_pts[j], direction='y_to_x')
-        # print('patch {} {} dist: {}'.format(i, j, tmp_chamfer))
-        # print('patch {} {} distxy: {} '.format(i, j, tmp_chamfer_xy))
-        # print('patch {} {} distyx: {} '.format(i, j, tmp_chamfer_yx))
-        # if tmp_chamfer < th_nms_dist:
         if tmp_chamfer_xy < th_nms_dist_patch and tmp_chamfer_yx < th_nms_dist_patch:
           #distance close enough
           error_curve = np.abs(patch_curve_similarity_round[i] - patch_curve_similarity_round[j]).sum()
@@ -1660,9 +1280,7 @@ def NMS_patch(data):
             patches['valid_prob'][j] = 0
             patch_curve_similarity[j] = 0.0
             patch_corner_similarity[j] = 0.0
-            
-  
-  # print('min cd:', min(alldists))
+
 
 def NMS_curve(data):
   corners = data['corners']['prediction']
@@ -1688,18 +1306,14 @@ def NMS_curve(data):
     if curves['valid_prob'][i] > th_valid:
       for j in range(i + 1, n_curve):
         tmp_chamfer = chamfer_distance(curve_pts[i], curve_pts[j])
-        # alldists.append(tmp_chamfer)
-        # print('{} {}: {}'.format(i, j, tmp_chamfer))
         if tmp_chamfer < th_nms_dist:
           #distance close enough
           error_patch = np.abs(patch_curve_similarity_round[:,i] - patch_curve_similarity_round[:,j]).sum()
           error_corner = np.abs(curve_corner_similarity_round[i] - curve_corner_similarity_round[j]).sum()
           if error_patch == 0 and error_corner == 0:
             print('merge curve {} {}'.format(i,j))
-            # patches['valid_prob'][j] = 0
             curves['valid_prob'][j] = 0
             patch_curve_similarity[:,j] = 0.0
-            # patch_corner_similarity[j] = 0.0
             curve_corner_similarity[j] = 0.0
 
 def NMS_corner(data):
@@ -1716,7 +1330,6 @@ def NMS_corner(data):
   curve_corner_similarity_round = np.round(data['curve_corner_similarity'])
   patch_curve_similarity_round = np.round(data['patch_curve_similarity'])
   patch_corner_similarity_round = np.round(data['patch_corner_similarity'])
-  #when deleting an item, the corresponding topo elements should be set as zeros
   
   corner_pts = corners['position']
   n_corner = len(valid_corners_idx[0])
@@ -1724,25 +1337,19 @@ def NMS_corner(data):
   for i in range(n_corner - 1):
     if corners['valid_prob'][i] > th_valid:
       for j in range(i + 1, n_corner):
-        # tmp_chamfer = chamfer_distance(curve_pts[i], curve_pts[j])
         tmp_chamfer = np.linalg.norm(corner_pts[i] - corner_pts[j])
-        # alldists.append(tmp_chamfer)
-        # print('{} {}: {}'.format(i, j, tmp_chamfer))
         if tmp_chamfer < th_nms_dist:
           #distance close enough
           error_patch = np.abs(patch_corner_similarity_round[:,i] - patch_corner_similarity_round[:,j]).sum()
           error_curve = np.abs(curve_corner_similarity_round[:,i] - curve_corner_similarity_round[:,j]).sum()
           if error_patch == 0 and error_curve == 0:
             print('merge corner {} {}'.format(i,j))
-            # patches['valid_prob'][j] = 0
             corners['valid_prob'][j] = 0
             patch_corner_similarity[:,j] = 0.0
-            # patch_corner_similarity[j] = 0.0
             curve_corner_similarity[:,j] = 0.0
 
 def NMS(data):
   #merge elements with similar geometry and same connection
-  #cut data firstly
   corners = data['corners']['prediction']
   curves = data['curves']['prediction']
   patches = data['patches']['prediction']
@@ -1750,16 +1357,11 @@ def NMS(data):
   curve_corner_similarity = data['curve_corner_similarity']
   patch_curve_similarity = data['patch_curve_similarity']
   patch_corner_similarity = data['patch_corner_similarity']
-  # return
 
   valid_corners_idx = np.where(corners['valid_prob'] > th_valid)
   valid_curves_idx = np.where(curves['valid_prob'] > th_valid)
   valid_patches_idx = np.where(patches['valid_prob'] > th_valid)
-  
-  # corners['valid_prob'] = np.ones(valid_corners_idx[0].shape[0])
-  # curves['valid_prob'] = np.ones(valid_curves_idx[0].shape[0])
-  # patches['valid_prob'] = np.ones(valid_patches_idx[0].shape[0])
-  
+
   corners['valid_prob'] = corners['valid_prob'][valid_corners_idx]
   curves['valid_prob'] = curves['valid_prob'][valid_curves_idx]
   patches['valid_prob'] = patches['valid_prob'][valid_patches_idx]
@@ -1775,8 +1377,6 @@ def NMS(data):
   data['curve_corner_similarity'] = curve_corner_similarity[valid_curves_idx[0]][:, valid_corners_idx[0]]
   data['patch_curve_similarity'] = patch_curve_similarity[valid_patches_idx[0]][:, valid_curves_idx[0]]
   data['patch_corner_similarity'] = patch_corner_similarity[valid_patches_idx[0]][:, valid_corners_idx[0]]
-  #topo not rounding yet
-  # return
   NMS_patch(data)
   NMS_curve(data)
   NMS_corner(data)
@@ -2085,7 +1685,6 @@ def check_feasibility(data):
       #   (flag_opt_fea, x) = mosek_linprog(c, A_ub, b_ub, A_eq_copy, b_eq_copy, xbd, xbdtype, flag_max = False, flag_int = True, flag_initial_guess = True, initial_guess = x_init)
 
   return flag_feas
-
 
 def process_sample(data):
   sample_id = data['sample_id']
@@ -2563,7 +2162,6 @@ def export_visualization_file_gt(output_filename, data):
       for i in range(valid_patch_type.shape[0]):
         wf.write("{:.6f}\n".format(valid_patch_close[i]))
 
-
 def load_complex_file(fn):
   #return a dictionary
   data = {'corners':{'prediction':{}}, 'curves':{'prediction':{}}, 'patches':{'prediction':{}}}
@@ -2653,13 +2251,6 @@ def load_json_file(fn):
 
   n_curve_pts = 34
   n_patch_pts = 400
-  # f = open(fn, 'r')
-  # cur_line = 0
-  # cur_split = lines[cur_line].split(' ')
-  # cur_line += 1
-  # nv = int(cur_split[0])
-  # ne = int(cur_split[1])
-  # nf = int(cur_split[2])
 
   nv = 0
   if info['corners'] != None:
@@ -2681,10 +2272,6 @@ def load_json_file(fn):
   curve_close_prob = []
   curve_pts = np.zeros([ne, n_curve_pts, 3])
   for i in range(ne):
-    # cur_split = lines[cur_line].split(' ')
-    # cur_line += 1
-    # curve_type.append(cur_split[0])
-    # curve_close_prob.append(float(cur_split[1]))
     curve_type.append(info['curves'][i]['type'])
     if info['curves'][i]['closed']:
       curve_close_prob.append(1.0)
@@ -2699,9 +2286,6 @@ def load_json_file(fn):
   patch_close = np.zeros(nf)
   patches = info['patches']
   for i in range(nf):
-    # cur_split = lines[cur_line].split(' ')
-    # cur_line += 1
-    # patch_type.append(cur_split[0])
     patch_type.append(patches[i]['type'])
     if patches[i]['u_closed']:
       patch_close[i] = 1.0
@@ -2711,12 +2295,6 @@ def load_json_file(fn):
       for k in range(3):
         patch_pts[i,j,k] = patches[i]['grid'][3 * j + k]
   
-  # curve_corner_similarity = np.zeros([ne, nv])
-  # for i in range(ne):
-  #   cur_split = lines[cur_line].split(' ')
-  #   cur_line += 1
-  #   for j in range(nv):
-  #     curve_corner_similarity[i,j] = float(cur_split[j])
   curve_corner_similarity = np.zeros([ne, nv], dtype=dtype)
   if info['curve2corner'] != None:
     curve_corner_similarity = np.array(info['curve2corner'])
@@ -2730,14 +2308,6 @@ def load_json_file(fn):
   if info['patch2corner'] != None:
     patch_corner_similarity = np.array(info['patch2corner'])
 
-  # for i in range(nf):
-  #   cur_split = lines[cur_line].split(' ')
-  #   cur_line += 1
-  #   for j in range(ne):
-  #     patch_curve_similarity[i,j] = float(cur_split[j])
-  
-  # print('patch type: ', patch_type)
-  # print('patch curve sim: ', patch_curve_similarity)
   corner_pred = {'valid_prob':np.ones(nv), 'position':corner_pos}
   curve_pred = {'valid_prob':np.ones(ne), 'closed_prob': np.array(curve_close_prob), 'points':curve_pts, 'type_prob': np.zeros([ne, 4])}
   patch_pred = {'valid_prob': np.ones(nf), 'points': patch_pts, 'type_prob': np.zeros([nf, 6]), 'closed_prob': patch_close}
@@ -2756,8 +2326,6 @@ def load_json_file(fn):
   data['patch_corner_similarity'] = patch_corner_similarity
   data['sample_id'] = fn
   return data
-
-
 
 th_dist = 0.1
 def check_geom_topo_cons(data):
@@ -2782,13 +2350,8 @@ def check_geom_topo_cons(data):
         if curve_corner_similarity[i, j] > 0.5:
           cur_corner = corner_pts[j]
           if not (np.linalg.norm(curve_e1 - cur_corner) < th_dist or np.linalg.norm(curve_e2 - cur_corner) < th_dist):
-            # print('eid: {} vid: {}'.format(i, j))
-            # print('e1: ', curve_e1)
-            # print('e2: ', curve_e2)
-            # print('corner: ', cur_corner)
             print('curve id: {} corner id: {}'.format(i,j))
             return 1
-            # a = 1
   
   #patch curve distance
   for i in range(nf):
@@ -2827,23 +2390,11 @@ def process_one_file(filename):
     data = pickle.load(rf)
   print(data.keys())
 
-  # #only save gt
-  # export_visualization_file_gt(fn_prefix + "_gt.complex", data)
-  # return
   data['name'] = filename
   export_visualization_file(fn_prefix+"_prediction.complex", data)
   
-  # return #0127, for debugging
-
   if not args.no_nms:
     NMS(data)
-    # export_visualization_file(fn_prefix+"_prediction_nms.complex", data)
-    # return
-  
-  # return
-  # data = merge_duplicated_primitives(data, flag_merge = False)
-  # export_visualization_file(str(data['sample_id'])+"_merged.complex", data)
-  # programming(data)
   flag_valid = programming_ilp(data)
 
   if not flag_valid:
@@ -2854,7 +2405,6 @@ def process_one_file(filename):
 
 
 def process_all():
-  # folder_name = './experiments/default/test_obj'
   folder_name = args.folder
   allfs = os.listdir(folder_name)
   # flag_process = 0
@@ -2865,8 +2415,6 @@ def process_all():
         continue
       filename = os.path.join(folder_name, f)
       tasks.append(filename)
-    
-
 
   #no parallel
   if not flag_parallel:
@@ -2878,7 +2426,6 @@ def process_all():
   #batch processing
   with Pool(num_parallel) as p:
     p.map(process_one_file, tasks)
-
 
 if __name__ == '__main__':
   process_all()
