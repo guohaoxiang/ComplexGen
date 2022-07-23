@@ -4,7 +4,7 @@ Each json file can be viewed as a dictionary containing the following informatio
 
 **'patches'**: a list of patch entries, each patch entry stores:
 + 'type': geometric type of the patch, including 'Plane', 'Sphere', 'Cylinder', 'Cone', 'Torus', 'BSpline'
-+ 'u_dim'/'v_dim': grid dimension of u/v direction
++ 'u_dim'/'v_dim': grid dimension of u/v direction (default: 20/20)
 + 'u_closed'/'v_closed': whether the patch is closed along the u/v direction
 + 'with_param': whether the entry stores the exact parametric surface information
 + 'params': an array of length 7, stores the exact parameters of the surface
@@ -17,7 +17,7 @@ Each json file can be viewed as a dictionary containing the following informatio
 **'curves'**: a list of curve entries, each curve entry stores:
 + 'type': geometric type of the curve, including 'Line', 'Circle', 'Ellipse', 'BSpline'
 + 'closed': whether the curve is closed
-+ 'pts': exact position of points uniformly sampled on the curve
++ 'pts': exact position of 34 points uniformly sampled on the curve
 
 **'corners'**: a list of corner entries, each corner entry stores its position
 
