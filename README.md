@@ -169,6 +169,15 @@ The evaluation is conducted under Linux. To evaluate the final output of Complex
 
 You can find the metrics of each model and all models in _ComplexGen/experiments/default/test_obj/final_evaluation_geom_refine.xlsx_.
 
+## Visualization
+
+We provide tools for converting our generated complex file or json file to obj files which can be visualized with [MeshLab](https://www.meshlab.net/):
+        
+        $ cd vis
+        $ python gen_vis_result.py -i PATH_TO_COMPLEX/JSON_FILE
+
+Remember to copy _./vis/complexgen.mtl_ to the target folder containing the complex/json file. Corners of the reconstructed B-Rep are shown in yellow, curves in blue and patches in different colors.
+
 <!-- ## Test on your own point cloud -->
 <!-- If you want to use our trained model to test on your own point cloud, please follow these steps: -->
 
