@@ -1,0 +1,1 @@
+python Minkowski_backbone.py --experiment_name noise002 --enable_automatic_restore --no_pe --hn_scale --patch_grid --ourresnet --eval --no_output --parsenet --patch_close --patch_emd --patch_uv --gpu 0 --noise 2

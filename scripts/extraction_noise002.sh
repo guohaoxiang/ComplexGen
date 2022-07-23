@@ -1,0 +1,1 @@
+python PostProcess/complex_extraction.py --folder ./experiments/noise002/test_obj

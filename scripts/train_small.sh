@@ -1,0 +1,1 @@
+python Minkowski_backbone.py --experiment_name quicktest  --no_pe --hn_scale --input_normal_signals --patch_grid --ourresnet --parsenet --patch_close --patch_emd --patch_uv --gpu 0 --quicktest --max_training_iterations 10

@@ -1,0 +1,1 @@
+python PostProcess/complex_extraction.py --folder ./experiments/partial/test_obj
