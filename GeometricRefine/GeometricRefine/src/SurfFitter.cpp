@@ -614,7 +614,6 @@ void CylinderFitter::aqd_fitting()
 {
 	//normals are not used in all fitting, but used for estimating normals
 	//fitting by aqd methods
-	//test code below
 	if (!flag_input_normal)
 	{
 		estimate_normal();
@@ -1016,25 +1015,6 @@ void CylinderFitter::projection_with_normal(const std::vector<vec3d>& src, std::
 }
 
 
-//void PlaneFitter::aqd_fitting()
-//{
-//	//normals are not used in all fitting, but used for estimating normals
-//	//fitting by aqd methods
-//	//test code below
-//	allquadrics::TriangleMesh inputMesh;
-//	char* defaultInput = "cylinder.obj";
-//	inputMesh.loadObj(defaultInput);
-//	inputMesh.centerAndScale(1);
-//	cout << "fitting using all fits function ..." << endl;
-//	vector<allquadrics::Quadric> qfits;
-//	fitAllQuadricTypes(inputMesh, qfits);
-//	for (size_t i = 0; i < qfits.size(); i++) {
-//		cout << "direct fit for quadric type: " << quadricTypeNames[i] << ":" << endl;
-//		outputQuadric(qfits[i]);
-//		cout << endl << endl;
-//	}
-//}
-
 void PlaneFitter::fitting()
 {
 	//aqd_fitting();
@@ -1140,7 +1120,6 @@ void ConeFitter::aqd_fitting()
 {
 	//normals are not used in all fitting, but used for estimating normals
 	//fitting by aqd methods
-	//test code below
 	if (!flag_input_normal)
 	{
 		estimate_normal();

@@ -2949,13 +2949,7 @@ void Quadric::buildMeshFromQuadric(TriangleMesh &mesh, vec3 &bmin, vec3 &bmax,
                 int ebot = makeEllipse(mesh, w, h, AX, AY, AZ, size[0], ptsPerEllipse);
                 vec3 X(0), Y(0), Z(0);
                 X[AX] = w; Y[AY] = h; Z[AZ] = size[0];
-                /*
-                double testvalX = qftemp.f(X+Z);
-                double testvalY = qftemp.f(Y+Z);
-                double testvalX2 = X*(D*X)+bnew*X+cnew;
-                double testvalY2 = Y*(D*Y)+bnew*Y+cnew;
-                cout << testvalX << " " << testvalX2 << " " << testvalY << " " << testvalY2 << endl;
-                */
+                
 
                 connectEllipses(mesh, etop, ebot, ptsPerEllipse);
                 if (closeQuadrics) {

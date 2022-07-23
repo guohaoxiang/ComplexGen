@@ -55,8 +55,6 @@ public:
 	{
 		assert(projection_pts.size() != 0);
 		//find nn pts of src from projection_pts
-		//tgt.clear();
-		//for (size_t i = 0; i < src.size(); i++)
 		{
 			double min_dist = -1.0;
 			size_t min_id = -1;
@@ -70,7 +68,6 @@ public:
 				}
 			}
 			assert(min_dist > -0.5);
-			//tgt.push_back(projection_pts[min_id]);
 			tgt = projection_pts[min_id];
 		}
 	}
