@@ -1,6 +1,6 @@
 ### JSON file description
 
-Each json file can be viewed as a dictionary containing the following information, and can be visualized following [here](https://github.com/guohaoxiang/ComplexGen#visualization)
+Each json file can be viewed as a dictionary containing the following information, and can be visualized following [here](https://github.com/guohaoxiang/ComplexGen#visualization).
 
 **'patches'**: a list of patch entries, each patch entry stores:
 + 'type': geometric type of the patch, including 'Plane', 'Sphere', 'Cylinder', 'Cone', 'Torus', 'BSpline'
