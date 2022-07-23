@@ -74,23 +74,3 @@ def write_ply(filename, points):
           for i in range(points.shape[0]):
               wf.write("%lf %lf %lf\n" %(points[i][0], points[i][1], points[i][2]))
 
-
-# plydata = tet_ply(True, '=')
-
-# print(plydata)
-# plydata.write("ply.ply")
-
-# vert_pos = np.array([[0, 0, 0],
-#                      [0, 1, 1],
-#                      [1, 0, 1],
-#                      [1, 1, 0]])
-
-# vert_posnormal = np.concatenate((vert_pos, vert_pos), axis = 1)
-
-# vert_color = np.array([[255, 255, 255],
-# 					   [255,   0,   0],
-# 					   [  0, 255,   0],
-# 					   [  0,   0, 255]])
-
-# # save_vert_color_ply(vert_pos, vert_color, "vert.ply")
-# save_vertnormal_color_ply(vert_posnormal, vert_color, "vert.ply")
