@@ -132,13 +132,34 @@ A set of complex file will be generated under _ComplexGen/experiments/default/te
 
 ## Phase 3: Geometric refinement
 
-### Environment setup
+Code of this phase can be compiled only under Windows, as I fail to build and link [clapack](https://netlib.org/clapack/) with our project under Linux. Sorry for the inconvenience :-(
 
-libigl
+### Environment setup
+libigl and Eigen are needed, you can install them via [vcpkg](https://github.com/microsoft/vcpkg)
+
+        $ vcpkg.exe integrate install
+        $ vcpkg.exe install libigl
+        $ vcpkg.exe install eigen3
+
+### Compile and build
+The C++ project can be generated with CMake:
+
+        $ cd PATH_TO_COMPLEXGEN\GeometricRefine
+        $ mkdir build
+        $ cmake ..
+
+Then you can build _GeometricRefine.sln_ with Visual Studio. After that, you'll find _GeometricRefine.exe_ under _PATH_TO_COMPLEXGEN/GeometricRefine/Bin_.
+
+To conduct geometric refinement for all models, please first modify..  then run:
+
+        $ cd PATH_TO_COMPLEXGEN
+        $ python .\script\geometric_refine_default.py
+
+You will find ...
 
 ## Evaluation
 
-To evaluate the final output of ComplexGen, run:
+The evaluation is conducted under Linux. To evaluate the final output of ComplexGen, run:
 
         $ ./scripts/eval_default.sh
 
