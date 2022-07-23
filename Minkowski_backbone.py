@@ -50,7 +50,6 @@ def get_args_parser():
     parser.add_argument('--hidden_dim_mlp', default=384, type=int, help = 'hidden dimension of MLP for ablation study')
     #for hn
     parser.add_argument('--hn_scale', action = 'store_true', help = 'original topo embed')
-    parser.add_argument('--ori_tripath', action = 'store_true', help = 'original topo embed')
     parser.add_argument('--no_tripath', action = 'store_true', help = 'no tripath, for ablation')
     parser.add_argument('--no_topo', action = 'store_true', help = 'no topo, for ablation, please also set no_tripath as true')
     parser.add_argument('--pe_sin', action = 'store_true', help = 'sin positional embedding')
@@ -220,7 +219,7 @@ import torch.nn as nn
 import math
 import torch.nn.functional as F
 
-from transformer3d import build_transformer, build_transformer_tripath, build_transformer_debug
+from transformer3d import build_transformer_tripath
 from matcher_corner import build_matcher_corner
 from matcher_curve import build_matcher_curve, cyclic_curve_points
 from matcher_patch import build_matcher_patch, emd_by_id
@@ -1416,10 +1415,7 @@ class DETR_Shape_Tripath(nn.Module):
         self.curve_model = DETR_Curve_Tripath(num_curve_queries, hidden_dim, aux_loss, device)
         self.patch_model = DETR_Patch_Tripath(num_patch_queries, hidden_dim, aux_loss, device)
         if not args.no_tripath:
-          if args.ori_tripath:
-            self.primitive_type_embed = nn.Embedding(4, m*6) #voxel, corner, curve, patch
-          else:
-            self.primitive_type_embed = nn.Embedding(3, m*6) #voxel, corner, curve, patch
+          self.primitive_type_embed = nn.Embedding(3, m*6) #corner, curve, patch
         else:
           self.primitive_type_embed = None
           
@@ -3420,14 +3416,7 @@ def build_unified_model_tripath(device, flag_eval = False):
   position_encoding = PositionEmbeddingSine3D(out_voxel_dim, m*2, normalize=True)
   
   ############# build transformer #############
-  # corner_transformer = build_transformer(args)
-  # curve_transformer = build_transformer(args)
-  # patch_transformer = build_transformer(args)
-
-  #cur version
   tripath_transformer = build_transformer_tripath(args)
-  # tripath_transformer = build_transformer_debug(args)
-  # tripath_transformer = build_transformer(args)
   
   ############# build detr model #############
   # model_shape = DETR_Shape_Tripath(backbone, position_encoding, tripath_transformer, args.num_queries, aux_loss=args.enable_aux_loss).to(device) #queries equals to 100, no aux loss
