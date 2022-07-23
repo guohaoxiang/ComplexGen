@@ -38,76 +38,7 @@ from MinkowskiCommon import (
 class MinkowskiLeakyReLU(MinkowskiNonlinearity.MinkowskiNonlinearityBase):
     MODULE = torch.nn.LeakyReLU
 
-class MinkowskiInstanceNormGuo_backup(MinkowskiModuleBase):
-    #this is an wrong implimentation, update 0928, layer norm, not instance norm
-    r"""A instance normalization layer for a sparse tensor.
-
-    """
-
-    def __init__(self, num_features):
-        r"""
-        Args:
-
-            num_features (int): the dimension of the input feautres.
-
-            mode (GlobalPoolingModel, optional): The internal global pooling computation mode.
-        """
-        Module.__init__(self)
-        self.num_features = num_features
-        self.weight = nn.Parameter(torch.ones(1, num_features))
-        self.bias = nn.Parameter(torch.zeros(1, num_features))
-        self.reset_parameters()
-        # self.inst_norm = MinkowskiInstanceNormFunctionGuo()
-
-    def __repr__(self):
-        s = f"(nchannels={self.num_features})"
-        return self.__class__.__name__ + s
-
-    def reset_parameters(self):
-        self.weight.data.fill_(1)
-        self.bias.data.zero_()
-
-    def forward(self, input: SparseTensor):
-        assert isinstance(input, SparseTensor)
-
-        # output = self.inst_norm.apply(
-        #     input.F, input.coordinate_map_key, None, input.coordinate_manager
-        # )
-
-
-        # list_of_feats = input.decomposed_features
-        # list_of_coords, list_of_feats = input.decomposed_coordinates_and_features
-        
-        # output_l = []
-        # for f in list_of_feats:
-        #     m = f.mean()
-        #     var = torch.var(f) + eps
-        #     std = var.sqrt()
-        #     f = (f - m) / std
-        #     f = f * self.weight + self.bias
-        #     output_l.append(f)
-
-        # coords, feats = ME.utils.sparse_collate(
-        # coords=list_of_coords, feats=output_l)
-        # output = ME.SparseTensor(coordinates=coords, features=feats)
-        # return output
-        # output = ME.SparseTensor(features=feats, coordinate_map_key=input.coordinate_map_key, coordinate_manager=input.coordinate_manager)
-        # return output
-
-        list_of_features = input.decomposed_features
-        list_of_permutations = input.decomposition_permutations
-        eps = 1e-5
-        for f,inds in zip(list_of_features, list_of_permutations):
-            # normalize f
-            m = f.mean()
-            var = torch.var(f) + eps
-            std = var.sqrt()
-            f = (f - m) / std
-            f = f * self.weight + self.bias
-            input.F[inds] = f
-        return input
-
-
+#we re-implement instance normalization
 class MinkowskiInstanceNormGuo(MinkowskiModuleBase):
     r"""A instance normalization layer for a sparse tensor.
 
@@ -138,31 +69,6 @@ class MinkowskiInstanceNormGuo(MinkowskiModuleBase):
 
     def forward(self, input: SparseTensor):
         assert isinstance(input, SparseTensor)
-
-        # output = self.inst_norm.apply(
-        #     input.F, input.coordinate_map_key, None, input.coordinate_manager
-        # )
-
-
-        # list_of_feats = input.decomposed_features
-        # list_of_coords, list_of_feats = input.decomposed_coordinates_and_features
-        
-        # output_l = []
-        # for f in list_of_feats:
-        #     m = f.mean()
-        #     var = torch.var(f) + eps
-        #     std = var.sqrt()
-        #     f = (f - m) / std
-        #     f = f * self.weight + self.bias
-        #     output_l.append(f)
-
-        # coords, feats = ME.utils.sparse_collate(
-        # coords=list_of_coords, feats=output_l)
-        # output = ME.SparseTensor(coordinates=coords, features=feats)
-        # return output
-        # output = ME.SparseTensor(features=feats, coordinate_map_key=input.coordinate_map_key, coordinate_manager=input.coordinate_manager)
-        # return output
-
         list_of_features = input.decomposed_features
         list_of_permutations = input.decomposition_permutations
         eps = 1e-6
@@ -178,6 +84,7 @@ class MinkowskiInstanceNormGuo(MinkowskiModuleBase):
 
 
 
+#abandoned this one, build resnet directly
 class ResNetBase(nn.Module):
     BLOCK = None
     LAYERS = ()
@@ -199,8 +106,7 @@ class ResNetBase(nn.Module):
             ME.MinkowskiConvolution(
                 in_channels, self.inplanes, kernel_size=3, stride=1, dimension=D #stride was 2 here
             ),
-            # MinkowskiInstanceNormGuo(self.inplanes),
-            MinkowskiInstanceNormGuo_backup(self.inplanes), #modify 20210928
+            MinkowskiInstanceNormGuo(self.inplanes),
             MinkowskiLeakyReLU(inplace=True),
             ME.MinkowskiMaxPooling(kernel_size=2, stride=2, dimension=D),
         )
@@ -245,7 +151,7 @@ class ResNetBase(nn.Module):
             if isinstance(m, ME.MinkowskiConvolution):
                 ME.utils.kaiming_normal_(m.kernel, mode="fan_out", nonlinearity="relu")
 
-            if isinstance(m, MinkowskiInstanceNormGuo_backup):
+            if isinstance(m, MinkowskiInstanceNormGuo):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
@@ -260,7 +166,7 @@ class ResNetBase(nn.Module):
                     stride=stride,
                     dimension=self.D,
                 ),
-                MinkowskiInstanceNormGuo_backup(planes * block.expansion),
+                MinkowskiInstanceNormGuo(planes * block.expansion),
             )
         layers = []
         layers.append(
@@ -288,11 +194,7 @@ class ResNetBase(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
-        # x = self.layer4(x)
-        #x = self.layer4(x)
-        #x = self.conv5(x)
-        #x = self.glob_pool(x)
-        return x#self.final(x)
+        return x
 
 
 class ResNet14(ResNetBase):
@@ -555,9 +457,6 @@ class ResNetBaseDecoderRec(nn.Module):
             ME.MinkowskiConvolution(
                 self.PLANES[2], out_channels, kernel_size=3, stride=1, dimension=D #stride was 2 here
             ),
-            # MinkowskiInstanceNormGuo(out_channels),
-            # MinkowskiLeakyReLU(inplace=True),
-            # ME.MinkowskiMaxPooling(kernel_size=2, stride=2, dimension=D),   #TODO: do we need this pooling?
         )
 
 
@@ -575,8 +474,6 @@ class ResNetBaseDecoderRec(nn.Module):
         layers = []
 
         # pooling to reduce spatial resolution
-        # layers.append(ME.MinkowskiPoolingTranspose(kernel_size=2, stride=2, dimension=self.D))
-        # layers.append(ME.MinkowskiGenerativeConvolutionTranspose(in_planes, in_planes, kernel_size=2, stride=2, dimension = self.D))
         layers.append(ME.MinkowskiConvolutionTranspose(in_planes, in_planes, kernel_size=2, stride=2, dimension = self.D))
 
 
@@ -648,9 +545,6 @@ class ResNetBaseDecoderOur(nn.Module):
             ME.MinkowskiConvolution(
                 self.PLANES[2], out_channels, kernel_size=3, stride=1, dimension=D #stride was 2 here
             ),
-            # MinkowskiInstanceNormGuo(out_channels),
-            # MinkowskiLeakyReLU(inplace=True),
-            # ME.MinkowskiMaxPooling(kernel_size=2, stride=2, dimension=D),   #TODO: do we need this pooling?
         )
 
 
