@@ -32,38 +32,28 @@ m = 32 #Unet number of features
 #HyperNets parameters
 hn_pe_dim = 64
 hn_mlp_dim = 64
+flag_using_scale = False
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
-    
     parser.add_argument('--no_output', action='store_true', help = 'not output for evaluation')
     parser.add_argument('--reuseid', action='store_true', help = 'reuse id for distance computation')
     parser.add_argument('--ori_topo', action = 'store_true', help = 'original topo embed')
     parser.add_argument('--ori_mlp', action='store_true', help = 'use original version of MLPs')
-    parser.add_argument('--no_tri', action='store_true', help = 'not using tripath (not used 20211014)')
     parser.add_argument('--ckpt_interval', default=3000, type=int)
-    # parser.add_argument('--dist_th', default=0.05, type=float)
-    parser.add_argument('--dist_th', default=0.1, type=float) #modified 1217
-    parser.add_argument('--dist_th_tg', default=0.1, type=float) #modified 0107, topo geom consistency
+    parser.add_argument('--dist_th', default=0.1, type=float)
+    parser.add_argument('--dist_th_tg', default=0.1, type=float)
     parser.add_argument('--val_th', default=0.5, type=float)
-    # parser.add_argument('--val_th', default=0.3, type=float)
     parser.add_argument('--flag_cycleid', action = 'store_true', help = 'cycle id')
     parser.add_argument('--parsenet', action = 'store_true', help = 'use parsenet data')
-    parser.add_argument('--decouple_pos_content', action = 'store_true', help = 'use parsenet data')
-
-    parser.add_argument('--ourresnet', action = 'store_true', help = 'use parsenet data')
-    parser.add_argument('--backbone_bn', action = 'store_true', help = 'use parsenet data')
-    parser.add_argument('--decoder_rec', action = 'store_true', help = 'use parsenet data')
+    parser.add_argument('--ourresnet', action = 'store_true', help = 'use our resnet')
+    parser.add_argument('--backbone_bn', action = 'store_true', help = 'use backbone with batch-norm')
     parser.add_argument('--m', default=64, type=int, help = 'set m value')
     parser.add_argument('--hidden_dim_mlp', default=384, type=int, help = 'hidden dimension of MLP for ablation study')
-  
     #for hn
     parser.add_argument('--hn_scale', action = 'store_true', help = 'original topo embed')
     parser.add_argument('--ori_tripath', action = 'store_true', help = 'original topo embed')
-
     parser.add_argument('--no_tripath', action = 'store_true', help = 'no tripath, for ablation')
     parser.add_argument('--no_topo', action = 'store_true', help = 'no topo, for ablation, please also set no_tripath as true')
-
-
     parser.add_argument('--pe_sin', action = 'store_true', help = 'sin positional embedding')
     parser.add_argument('--pe_sin_base', default=1.2, type=float)
     parser.add_argument('--no_pe', action = 'store_true', help = 'not using positional encoding')
@@ -80,17 +70,15 @@ def get_args_parser():
     parser.add_argument('--patch_grid', action = 'store_true', help = 'using patch grid')
     parser.add_argument('--patch_close', action = 'store_true', help = 'predict patch closeness')
     parser.add_argument('--batch_cd', action = 'store_true', help = 'compute chamfer distance in batch')
-    parser.add_argument('--patch_emd', action = 'store_true', help = 'using emd for patch loss computing, not implemented yet')
+    parser.add_argument('--patch_emd', action = 'store_true', help = 'using emd for patch loss computing')
     parser.add_argument('--patch_uv', action = 'store_true', help = 'compute patch uv, and patch emd is computed based on patch uv')
-    parser.add_argument('--curve_open_loss', action = 'store_true', help = 'using emd for patch loss computing, not implemented yet')
+    parser.add_argument('--curve_open_loss', action = 'store_true', help = 'treat open curve seperately')
     parser.add_argument('--backbone_expand', action = 'store_true', help = 'expand backbone coordinates and kernel size of the first convolution')
-
     parser.add_argument('--output_normal', action = 'store_true', help = 'output normal for prediction')
     parser.add_argument('--output_normal_diff_coef', default=1, type=float, help="loss coefficient for output normal diff loss")
     parser.add_argument('--output_normal_tangent_coef', default=1, type=float, help="loss coefficient for output normal tangent lonss")
     parser.add_argument('--enable_automatic_restore', action='store_true', help = 'find ckpt automatically when training is interrupted')
     parser.add_argument('--quicktest', action='store_true', help = 'only test on 10 models, no validation is used')
-    # parser.add_argument('--noise', action='store_true', help = 'add noise')
     parser.add_argument('--noise', default=0, type=int, help = 'add noise, 0:no, 1: 0.01, 2: 0.02, 3: 0.05')
     parser.add_argument('--noisetest', default=0, type=int, help = 'add noise for testing, 0:no, 1: 0.01, 2: 0.02, 3: 0.05')
     parser.add_argument('--partial', action='store_true', help = 'use partial data')
@@ -107,32 +95,26 @@ def get_args_parser():
     parser.add_argument('--evalrest', action='store_true', help="evaluate rest data of 900 models")
     parser.add_argument('--part', default=-1, type=int) #0,1,2,3, divide data into 4 groups
     parser.add_argument('--regen', action='store_true', help="regen files")
-    parser.add_argument('--wsa', action='store_true', help="working on wsa")
     parser.add_argument('--th_cov', default=0.01, type=float)
     parser.add_argument('--rotation_augment', action='store_true', help="enable rotation augmentation")
     parser.add_argument('--num_angles', type=int)
     parser.add_argument('--random_angle', action='store_true', help="enable rotation augmentation with random angle")
     parser.add_argument('--input_voxel_dim', default=128, type=int, help="voxel dimension of input")
-    
-    #if this is the run for evaluation
     parser.add_argument('--eval', action='store_true')
     parser.add_argument('--evalfinal', action='store_true')
     parser.add_argument('--evaltopo', action='store_true')
     parser.add_argument('--fittingonce', action='store_true')
     
-    # parser.add_argument('--hidden_dim', default=m*6, type=int,
-    #                     help="Size of the embeddings (dimension of the transformer)")
     parser.add_argument('--dropout', default=0.0, type=float,
                         help="Dropout applied in the transformer")
     parser.add_argument('--nheads', default=8, type=int,
                         help="Number of attention heads inside the transformer's attentions")
-    #parser.add_argument('--num_queries', default=100, type=int,help="Number of query slots")
 
-    parser.add_argument('--num_corner_queries', default=100, type=int,help="Number of query slots")
+    parser.add_argument('--num_corner_queries', default=100, type=int,help="Number of corner query slots")
 
-    parser.add_argument('--num_curve_queries', default=150, type=int,help="Number of query slots")
+    parser.add_argument('--num_curve_queries', default=150, type=int,help="Number of curve query slots")
 
-    parser.add_argument('--num_patch_queries', default=100, type=int,help="Number of query slots")
+    parser.add_argument('--num_patch_queries', default=100, type=int,help="Number of patch query slots")
 
     parser.add_argument('--pre_norm', action='store_false') #true
     
@@ -152,8 +134,6 @@ def get_args_parser():
                         help="Intermediate size of the feedforward layers in the transformer blocks")
     parser.add_argument('--local_attention', dest='using_local_attention',action='store_true',
                         help="Using local attention in transformer")
-    
-    #correspondences across different level primitives
     parser.add_argument("--topo_embed_dim", default=256, type=int, help="Feature Dimension Size For Topology Matching")
     parser.add_argument("--normalize_embed_feature", action="store_true", help="Normalize Topo Feature before Matching")
     parser.add_argument("--num_heads_dot", default=1, type=int, help="number of heads to compute similarity")
@@ -167,8 +147,6 @@ def get_args_parser():
     parser.add_argument('--curve_avg_count', default=37.39, type=float, help="avg curve count for parsenet dataset")
     parser.add_argument('--patch_avg_count', default=18.17, type=float, help="avg patch count for parsenet dataset")
     parser.add_argument('--global_invalid_weight', default=1.0, type=float, help="avg patch count for parsenet dataset")
-
-    
     parser.add_argument('--curve_corner_topo_loss_coef', default=1, type=float)
     parser.add_argument('--patch_curve_topo_loss_coef', default=1, type=float)
     parser.add_argument('--patch_corner_topo_loss_coef', default=1, type=float)
@@ -176,65 +154,37 @@ def get_args_parser():
     parser.add_argument('--curve_corner_geom_loss_coef', default=0, type=float)
     parser.add_argument('--topo_acc', action='store_true',help="compute and show topo_acc")
     parser.add_argument('--no_show_topo', action='store_true',help="not show three topo loss: curve_point, curve_patch, patch_close")
-
     parser.add_argument('--patch_normal_loss_coef', default=1, type=float, help="loss coefficient for patch normal loss")
-
     parser.add_argument('--patch_lap_loss_coef', default=1000, type=float, help="loss coefficient for patch normal loss")
-
-
     parser.add_argument('--weight_decay', default=1e-4, type=float)
     
     #transformer feature embedding
     parser.add_argument("--curve_embedding_mlp_layers", default=3, type=int)
-    
-    # Loss
-    # parser.add_argument('--no_aux_loss', dest='enable_aux_loss', action='store_false',
-    #                     help="Disables auxiliary decoding losses (loss at each layer)") #only enable_aux_loss is callable
-
     parser.add_argument('--enable_aux_loss', action='store_true',
                         help="Disables auxiliary decoding losses (loss at each layer)") #only enable_aux_loss is callable
-    
     # training
     parser.add_argument('--gpu', default="0,1,2", type=str,
                         help="gpu id to be used")
-    
     parser.add_argument("--checkpoint_path", default=None, type=str, help="checkpoint file (if have) to be used")
-    
     parser.add_argument("--input_feature_type", default='global', type=str, help="input feature type(supported type: local global occupancy)")
-    
     parser.add_argument("--input_normal_signals", action='store_true', help='input normal signals in voxel features')
-    
     parser.add_argument('--max_training_iterations', default=250001, type=int)
-    
-    #
     parser.add_argument('--skip_transformer_encoder', action='store_false', help = 'remove encoder part of transformer')
     parser.add_argument('--clip_max_norm', default=0.0, type=float,
                        help='gradient clipping max norm')    
 
     parser.add_argument('--clip_value', action='store_true', help = 'clip value')
-    
-    
     parser.add_argument('--single_dir_patch_chamfer', action='store_true', help = 'Single direction chamfer loss in patch processing')
-
     parser.add_argument('--extra_single_chamfer', action='store_true', help = 'based on emd, add extra single chamfer distance from gt patch to predicted grid')
-
     parser.add_argument('--extra_single_chamfer_weight', default=300.0, type=float)
-
-
+    parser.add_argument("--save_gt", action='store_true', help = 'save gt info in predicted pickle file')
+    parser.add_argument("--no_instance_norm", action='store_true', help = 'using instance normalization in mink backbone')
+    parser.add_argument("--sin", action='store_true', help = 'using sin activation in geometry mlp')
+    parser.add_argument("--suffix", default='_opt_mix_final.json', type=str, help="suffix for evaluation")
+    parser.add_argument("--folder", default=None, type=str, help="inter folder for evaluation")
+    parser.add_argument("--vis_inter_layer", default=-1, type=int)
     # * Matcher
     parser.add_argument("--using_prob_in_matching", action='store_true', help = 'using -p in matching cost')
-
-    parser.add_argument("--save_gt", action='store_true', help = 'save gt info in predicted pickle file')
-    
-    parser.add_argument("--no_instance_norm", action='store_true', help = 'using instance normalization in mink backbone')
-    
-    parser.add_argument("--sin", action='store_true', help = 'using sin activation in geometry mlp')
-
-    parser.add_argument("--suffix", default='_opt_mix_final.json', type=str, help="suffix for evaluation")
-
-    parser.add_argument("--folder", default=None, type=str, help="inter folder for evaluation")
-
-    parser.add_argument("--vis_inter_layer", default=-1, type=int)
 
 
     '''
@@ -904,338 +854,6 @@ class BackBone2VoxelTokens(nn.Module):
         voxel_position_encoding = torch.stack(position_embedding_list, dim=1)
         #print("input feature to transformer shape: {}".format(batch_voxel_feature.shape))
         return voxel_features, voxel_position_encoding, voxel_features_padding_mask, torch.split(torch.cat((batch_idx.view(-1,1), sparse_locations), dim=-1), batch_number_samples), attention_mask
-
-class DETR_Corner(nn.Module):
-    """ This is the DETR module that performs geometric primitive detection """
-    def __init__(self, transformer, num_queries, aux_loss=False): #num_classes is not used for corner detection #backbone
-        """ Initializes the model.
-        Parameters:
-            backbone: torch module of the backbone to be used. See backbone.py
-            transformer: torch module of the transformer architecture. See transformer.py
-            num_classes: number of object classes
-            num_queries: number of object queries, ie detection slot. This is the maximal number of objects
-                         DETR can detect in a single image. For COCO, we recommend 100 queries.
-            aux_loss: True if auxiliary decoding losses (loss at each decoder layer) are to be used.
-        """
-        super().__init__()
-        self.num_queries = num_queries
-        self.transformer = transformer
-        hidden_dim = transformer.d_model
-        self.empty_prediction_embed = nn.Linear(hidden_dim, 2)#num_classes + 1, empty or non-empty
-        self.corner_position_embed = MLP(hidden_dim, hidden_dim, 3, 3) #was bbox embed
-        self.query_embed = nn.Embedding(num_queries, hidden_dim)
-        #self.input_proj = nn.Conv2d(backbone.num_channels, hidden_dim, kernel_size=1)
-        self.aux_loss = aux_loss
-        self.corner_topo_embed = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim if not args.matrix_eigen_similarity else 24, 2)
-        
-        
-    def forward(self, voxel_features, voxel_position_encoding, voxel_features_padding_mask, attention_mask=None):
-        """ The forward expects a NestedTensor, which consists of:
-               - samples.tensor: batched images, of shape [batch_size x 3 x H x W]
-               - samples.mask: a binary mask of shape [batch_size x H x W], containing 1 on padded pixels
-
-            It returns a dict with the following elements:
-               - "pred_logits": the classification logits (including no-object) for all queries.
-                                Shape= [batch_size x num_queries x (num_classes + 1)]
-               - "pred_boxes": The normalized boxes coordinates for all queries, represented as
-                               (center_x, center_y, height, width). These values are normalized in [0, 1],
-                               relative to the size of each individual image (disregarding possible padding).
-                               See PostProcess for information on how to retrieve the unnormalized bounding box.
-               - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
-                                dictionnaries containing the two above keys for each decoder layer.
-        """                
-        src = voxel_features
-        pos = voxel_position_encoding
-        mask = voxel_features_padding_mask
-        #print(src.device, mask.device, self.query_embed.weight.device, pos.device)
-        #t1 = time.time()
-        #print("{}s elapsed for prepare data for transformer and encoding position".format(t1-t0))
-        
-        #t0 = time.time()
-        assert mask is not None
-        hs = self.transformer(src, mask, self.query_embed.weight, pos, src_attention_mask=attention_mask)[0] #self.input_proj, the first element
-        #t1 = time.time()
-        #print("{}s elapsed for prepare data for transformer forwarding".format(t1-t0))
-        #print("hs.shape=", hs.shape)[6, 2, 100, 192]
-        
-        #t0 = time.time()
-        #outputs_class = self.class_embed(hs)
-        outputs_corner_coord = self.corner_position_embed(hs).tanh()*0.5 # [-0.5,0.5]
-        outputs_class = self.empty_prediction_embed(hs) #to be consistent with curve and patch type prediction, we treat 0 as non-empty and 1 as empty
-        
-        if(args.normalize_embed_feature): #false
-          output_corner_topo_embedding = F.normalize(self.corner_topo_embed(hs), dim=-1)
-        else:
-          output_corner_topo_embedding = self.corner_topo_embed(hs)
-        
-        out = {'pred_logits': outputs_class[-1], 'pred_corner_position': outputs_corner_coord[-1], 'corner_topo_embed': output_corner_topo_embedding[-1]}
-        if self.aux_loss:
-          out['aux_outputs'] = self._set_aux_loss(outputs_class, outputs_corner_coord, output_corner_topo_embedding)
-        #t1 = time.time()
-        #print("{}s elapsed for class and geometry embedding(auxilary included)".format(t1-t0))
-        
-        return out, hs[-1]#lastlayer
-
-    @torch.jit.unused
-    def _set_aux_loss(self, outputs_class, outputs_coord, output_corner_topo_embedding):
-        # this is a workaround to make torchscript happy, as torchscript
-        # doesn't support dictionary with non-homogeneous values, such
-        # as a dict having both a Tensor and a list.
-        return [{'pred_logits': a, 'pred_corner_position': b, 'corner_topo_embed': c}
-                for a, b, c in zip(outputs_class[:-1], outputs_coord[:-1], output_corner_topo_embedding[:-1])]
-
-#added on 20210329, only used for forwarding
-flag_using_scale = False
-
-# detr curve
-class DETR_Curve(nn.Module):
-    """ This is the DETR module that performs geometric primitive detection - Curves """
-    def __init__(self, transformer, num_queries, aux_loss=False): #num_classes is not used for corner detection #backbone
-        """ Initializes the model.
-        Parameters:
-            backbone: torch module of the backbone to be used. See backbone.py
-            transformer: torch module of the transformer architecture. See transformer.py
-            num_classes: number of object classes
-            num_queries: number of object queries, ie detection slot. This is the maximal number of objects
-                         DETR can detect in a single image. For COCO, we recommend 100 queries.
-            aux_loss: True if auxiliary decoding losses (loss at each decoder layer) are to be used.
-        """
-        super().__init__()
-        self.num_queries = num_queries
-        self.transformer = transformer
-        hidden_dim = transformer.d_model
-        self.valid_curve_embed = MLP(hidden_dim, hidden_dim, 2, args.curve_embedding_mlp_layers)
-        #nn.Linear(hidden_dim, 5)#num_classes + 1, Circle, BSpline, Line, Ellipse or non-empty
-        self.curve_type_prediction_embed = MLP(hidden_dim, hidden_dim, 4, args.curve_embedding_mlp_layers)
-        self.closed_curve_embed = MLP(hidden_dim, hidden_dim, 2, 3) #not closed, closed
-        self.query_embed = nn.Embedding(num_queries, hidden_dim) #independent query embedding
-        #self.input_proj = nn.Conv2d(backbone.num_channels, hidden_dim, kernel_size=1)
-        self.aux_loss = aux_loss
-        
-        self.curve_start_point_embed = MLP(hidden_dim, hidden_dim, 3, 3)
-        self.curve_shape_embed = MLP(hidden_dim + 1, hidden_dim, 3, 6, sin=args.sin) #displacement from start point
-        self.curve_topo_embed = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim, 3)
-
-        if flag_using_scale:
-          self.curve_shape_scale_embed = MLP(hidden_dim, hidden_dim, 1, 3)
-        
-        '''
-        self.line_embed = MLP(hidden_dim, hidden_dim, 6, 3) #predict start point position, end point position
-        self.circle_embed = MLP(hidden_dim, hidden_dim, 11, 3) #predict center of circle, radius, start points of arc(axis=0), angle of arc, axis-1(make orthogonal to axis-0)
-        self.ellipse_embed = MLP(hidden_dim, hidden_dim, 7, 3) #predict center of ellipse, axis-0 radius, start(axis-0 direction), axis-1 direction and radius,  end points of arc, angle of arc
-        
-        self.bSpline_startpoint_embed = MLP(hidden_dim, hidden_dim, 5, 3) #predict start position as well as parameterization space of spline
-        self.bSpline_shape_embed = MLP(hidden_dim+1, hidden_dim, 3, 3) #predict shape of spline
-        '''
-         
-    def forward(self, voxel_features, voxel_position_encoding, voxel_features_padding_mask, attention_mask=None, corner_query_features=None, primitive_type_embed=None):
-        """ The forward expects a NestedTensor, which consists of:
-               - samples.tensor: batched images, of shape [batch_size x 3 x H x W]
-               - samples.mask: a binary mask of shape [batch_size x H x W], containing 1 on padded pixels
-
-            It returns a dict with the following elements:
-               - "pred_logits": the classification logits (including no-object) for all queries.
-                                Shape= [batch_size x num_queries x (num_classes + 1)]
-               - "pred_boxes": The normalized boxes coordinates for all queries, represented as
-                               (center_x, center_y, height, width). These values are normalized in [0, 1],
-                               relative to the size of each individual image (disregarding possible padding).
-                               See PostProcess for information on how to retrieve the unnormalized bounding box.
-               - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
-                                dictionnaries containing the two above keys for each decoder layer.
-        """
-        #pri embd: 3x192
-        src = voxel_features
-        pos = voxel_position_encoding
-        mask = voxel_features_padding_mask
-        #print(src.device, mask.device, self.query_embed.weight.device, pos.device)
-        
-        if(corner_query_features is not None and primitive_type_embed is not None):
-          assert(attention_mask is None)
-          #add voxel embedding feature to voxel features
-          voxel_features_mod = src + primitive_type_embed[0]
-          corner_query_features_mod = corner_query_features + primitive_type_embed[1]
-          src = torch.cat([corner_query_features_mod.transpose(0,1), voxel_features_mod], dim=0)
-          #print(mask.shape, pos.shape)
-          mask = F.pad(mask, (args.num_queries, 0), value=False)
-          #TODO: add corner position encoding or query index position encoding
-          pos = F.pad(pos, (0, 0, 0, 0, args.num_queries, 0), value=0) #from back to front
-          
-        
-        #t0 = time.time()
-        assert mask is not None
-        hs = self.transformer(src, mask, self.query_embed.weight, pos, src_attention_mask=attention_mask)[0] #self.input_proj
-        #t1 = time.time()
-        #print("{}s elapsed for prepare data for transformer forwarding".format(t1-t0))
-        #print("hs.shape=", hs.shape)[6, 2, 100, 192]
-        
-        #t0 = time.time()
-        #outputs_class = self.class_embed(hs)
-        outputs_start_point_coord = self.curve_start_point_embed(hs).tanh()*0.5 # [-0.5,0.5]
-        if not flag_using_scale:
-          curve_shape_scale = 1#F.elu(self.curve_shape_scale_embed(hs)).unsqueeze(-2) + 1.0
-        else:
-          curve_shape_scale = F.elu(self.curve_shape_scale_embed(hs)).unsqueeze(-2) + 1.0
-        #assert(len(outputs_start_point_coord.shape) + 1 == len(curve_shape_scale.shape))
-        
-        parameterization_coord = (torch.arange(points_per_curve, dtype=torch.float32, device=voxel_features.device) / (points_per_curve - 1)).view(1, 1, 1, points_per_curve, 1).repeat(args.dec_layers, args.batch_size, args.num_queries, 1, 1)
-        sampled_points_feature = torch.cat([hs.unsqueeze(-2).repeat(1, 1, 1, points_per_curve, 1), parameterization_coord], dim=-1)
-        #in shape [6, bs, 100, 34, 3]
-        sampled_points = outputs_start_point_coord.unsqueeze(-2).repeat(1,1,1,points_per_curve,1) + curve_shape_scale*self.curve_shape_embed(sampled_points_feature)
-        
-        is_curve_closed_logits = self.closed_curve_embed(hs)
-        
-        is_curve_valid_pred = self.valid_curve_embed(hs)
-        outputs_class = self.curve_type_prediction_embed(hs) #Circle, BSpline, Line, Ellipse or non-empty
-        
-        if(args.normalize_embed_feature):
-          output_curve_topo_embedding = F.normalize(self.curve_topo_embed(hs), dim=-1)
-        else:
-          output_curve_topo_embedding = self.curve_topo_embed(hs)
-        
-        out = {'pred_curve_logits': is_curve_valid_pred[-1], 'pred_curve_type': outputs_class[-1], 'pred_curve_points': sampled_points[-1], 'closed_curve_logits':is_curve_closed_logits[-1], 'curve_topo_embed': output_curve_topo_embedding[-1]}
-        if self.aux_loss:
-          out['aux_outputs'] = self._set_aux_loss(is_curve_valid_pred, outputs_class, sampled_points, is_curve_closed_logits, output_curve_topo_embedding)
-        #t1 = time.time()
-        #print("{}s elapsed for class and geometry embedding(auxilary included)".format(t1-t0))
-        
-        return out, hs[-1]
-
-    @torch.jit.unused
-    def _set_aux_loss(self, is_curve_valid_pred, outputs_class, outputs_coord, closed_curve_logits, output_curve_topo_embedding):
-        # this is a workaround to make torchscript happy, as torchscript
-        # doesn't support dictionary with non-homogeneous values, such
-        # as a dict having both a Tensor and a list.
-        return [{'pred_curve_logits': e, 'pred_curve_type': a, 'pred_curve_points': b, 'closed_curve_logits': c, "curve_topo_embed": d}
-                for a, b, c, d, e in zip(outputs_class[:-1], outputs_coord[:-1], closed_curve_logits[:-1], output_curve_topo_embedding[:-1], is_curve_valid_pred[:-1])]
-
-class DETR_Patch(nn.Module):
-    """ This is the DETR module that performs geometric primitive detection - Curves """
-    def __init__(self, transformer, num_queries, aux_loss=False): #num_classes is not used for corner detection #backbone
-        """ Initializes the model.
-        Parameters:
-            backbone: torch module of the backbone to be used. See backbone.py
-            transformer: torch module of the transformer architecture. See transformer.py
-            num_classes: number of object classes
-            num_queries: number of object queries, ie detection slot. This is the maximal number of objects
-                         DETR can detect in a single image. For COCO, we recommend 100 queries.
-            aux_loss: True if auxiliary decoding losses (loss at each decoder layer) are to be used.
-        """
-        super().__init__()
-        self.num_queries = num_queries
-        self.transformer = transformer
-        hidden_dim = transformer.d_model
-        self.valid_patch_embed = MLP(hidden_dim, hidden_dim, 2, args.curve_embedding_mlp_layers)
-        #Cylinder, Torus, BSpline, Plane, Cone, Sphere
-        self.patch_type_prediction_embed = MLP(hidden_dim, hidden_dim, 6, args.curve_embedding_mlp_layers)
-        self.query_embed = nn.Embedding(num_queries, hidden_dim) #independent query embedding
-        self.aux_loss = aux_loss
-        
-        self.patch_center_embed = MLP(hidden_dim, hidden_dim, 3, 3)
-        if flag_using_scale:
-          self.patch_shape_scale_embed = MLP(hidden_dim, hidden_dim, 1, 3)
-        self.patch_shape_embed = MLP(hidden_dim + 2, hidden_dim, 3, 6, sin=args.sin) #displacement from start point          
-        self.patch_topo_embed = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim, 3)
-         
-    def forward(self, voxel_features, voxel_position_encoding, voxel_features_padding_mask, attention_mask=None, curve_query_features=None, primitive_type_embed=None):
-        """ The forward expects a NestedTensor, which consists of:
-               - samples.tensor: batched images, of shape [batch_size x 3 x H x W]
-               - samples.mask: a binary mask of shape [batch_size x H x W], containing 1 on padded pixels
-
-            It returns a dict with the following elements:
-               - "pred_logits": the classification logits (including no-object) for all queries.
-                                Shape= [batch_size x num_queries x (num_classes + 1)]
-               - "pred_boxes": The normalized boxes coordinates for all queries, represented as
-                               (center_x, center_y, height, width). These values are normalized in [0, 1],
-                               relative to the size of each individual image (disregarding possible padding).
-                               See PostProcess for information on how to retrieve the unnormalized bounding box.
-               - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
-                                dictionnaries containing the two above keys for each decoder layer.
-        """
-                
-        src = voxel_features
-        pos = voxel_position_encoding
-        mask = voxel_features_padding_mask
-        #print(src.device, mask.device, self.query_embed.weight.device, pos.device)
-        
-        if(curve_query_features is not None and primitive_type_embed is not None):
-          assert(attention_mask is None)
-          #add voxel embedding feature to voxel features
-          #src: 300,1,192
-          #primitive_type_embed: 3,192
-          voxel_features_mod = src + primitive_type_embed[0]
-          #curve_query_features: 1, 100, 192
-          curve_query_features_mod = curve_query_features + primitive_type_embed[2]
-          src = torch.cat([curve_query_features_mod.transpose(0,1), voxel_features_mod], dim=0)
-          #print(mask.shape, pos.shape)
-          mask = F.pad(mask, (args.num_queries, 0), value=False)
-          #TODO: add corner position encoding or query index position encoding
-          pos = F.pad(pos, (0, 0, 0, 0, args.num_queries, 0), value=0)
-          
-        
-        #t0 = time.time()
-        assert mask is not None
-        hs = self.transformer(src, mask, self.query_embed.weight, pos, src_attention_mask=attention_mask)[0] #self.input_proj
-        #t1 = time.time()
-        #print("{}s elapsed for prepare data for transformer forwarding".format(t1-t0))
-        #print("hs.shape=", hs.shape)[6, 2, 100, 192]
-        
-        #t0 = time.time()
-        outputs_start_point_coord = self.patch_center_embed(hs).tanh()*0.5 # [-0.5,0.5]
-        if not flag_using_scale:
-          patch_shape_scale = 1#F.elu(self.patch_shape_scale_embed(hs)).unsqueeze(-2) + 1.0
-        else:
-          patch_shape_scale = F.elu(self.patch_shape_scale_embed(hs)).unsqueeze(-2) + 1.0
-        parameterization_coord = torch.arange(points_per_patch_dim*points_per_patch_dim, dtype=torch.int32, device=voxel_features.device)
-        parameterization_coord = (torch.cat([(parameterization_coord // points_per_patch_dim).view(-1,1), (parameterization_coord % points_per_patch_dim).view(-1,1)], dim=1).float() / (points_per_patch_dim - 1)).view(1, 1, 1, points_per_patch_dim*points_per_patch_dim, 2).repeat(args.dec_layers, args.batch_size, args.num_queries, 1, 1)
-        sampled_points_feature = torch.cat([hs.unsqueeze(-2).repeat(1, 1, 1, points_per_patch_dim*points_per_patch_dim, 1), parameterization_coord], dim=-1)
-        #in shape [6, bs, 100, 100*100, 3]
-        sampled_points = outputs_start_point_coord.unsqueeze(-2).repeat(1,1,1,points_per_patch_dim*points_per_patch_dim,1) + patch_shape_scale*self.patch_shape_embed(sampled_points_feature)
-        
-        is_patch_valid_pred = self.valid_patch_embed(hs)
-        outputs_class = self.patch_type_prediction_embed(hs) #Circle, BSpline, Line, Ellipse or non-empty
-        
-        if(args.normalize_embed_feature):
-          output_patch_topo_embedding = F.normalize(self.patch_topo_embed(hs), dim=-1)
-        else:
-          output_patch_topo_embedding = self.patch_topo_embed(hs)
-        
-        out = {'pred_patch_logits': is_patch_valid_pred[-1], 'pred_patch_type': outputs_class[-1], 'pred_patch_points': sampled_points[-1], 'patch_topo_embed': output_patch_topo_embedding[-1]}
-        if self.aux_loss:
-          out['aux_outputs'] = self._set_aux_loss(is_patch_valid_pred, outputs_class, sampled_points, output_patch_topo_embedding)
-        #t1 = time.time()
-        #print("{}s elapsed for class and geometry embedding(auxilary included)".format(t1-t0))
-        
-        return out
-
-    @torch.jit.unused
-    def _set_aux_loss(self, is_patch_valid_pred, outputs_class, outputs_coord, output_patch_topo_embedding):
-        # this is a workaround to make torchscript happy, as torchscript
-        # doesn't support dictionary with non-homogeneous values, such
-        # as a dict having both a Tensor and a list.
-        return [{'pred_patch_logits': e, 'pred_patch_type': a, 'pred_patch_points': b, "patch_topo_embed": d}
-                for a, b, d, e in zip(outputs_class[:-1], outputs_coord[:-1], output_patch_topo_embedding[:-1], is_patch_valid_pred[:-1])]
-
-class DETR_Shape(nn.Module):
-    def __init__(self, backbone, position_encoding, corner_transformer, curve_transformer, patch_transformer, num_queries, aux_loss=False):
-        super().__init__()
-        self.backbone = BackBone2VoxelTokens(backbone, position_encoding)
-        self.corner_model = DETR_Corner(corner_transformer, num_queries, aux_loss)
-        self.curve_model = DETR_Curve(curve_transformer, num_queries, aux_loss)
-        self.patch_model = DETR_Patch(patch_transformer, num_queries, aux_loss)
-        self.primitive_type_embed = nn.Embedding(3, m*6) #voxel, corner, curve
-        # self.primitive_type_embed = nn.Embedding(4, m*6) #voxel, corner, curve
-
-    
-    def forward(self, locations, features):
-        voxel_features, voxel_position_encoding, voxel_features_padding_mask, sparse_locations, attention_mask = self.backbone(locations, features) #feature: pos
-        corner_predictions, corner_query_features = self.corner_model(voxel_features, voxel_position_encoding, voxel_features_padding_mask, attention_mask)
-        #print("corner_query_features.shape =", corner_query_features.shape) #in shape [2, 100, 192]
-        #print("voxel_features.shape = ", voxel_features.shape, " voxel_position_encoding.shape", voxel_position_encoding.shape) [1598, 2, 192]
-        #print(self.primitive_type_embed.weight)
-        curve_predictions, curve_query_features = self.curve_model(voxel_features, voxel_position_encoding, voxel_features_padding_mask, attention_mask, corner_query_features=corner_query_features, primitive_type_embed=self.primitive_type_embed.weight)
-        patch_predictions                       = self.patch_model(voxel_features, voxel_position_encoding, voxel_features_padding_mask, attention_mask, curve_query_features=curve_query_features, primitive_type_embed=self.primitive_type_embed.weight)
-        return sparse_locations, corner_predictions, curve_predictions, patch_predictions
-
 
 class DETR_Corner_Tripath(nn.Module):
     """ This is the DETR module that performs geometric primitive detection """
@@ -4065,86 +3683,6 @@ def prepare_experiment_folders(exp_name):
   
   return log_dir, obj_dir, checkpoint_dir
 
-def build_unified_model(device, flag_eval = False):
-  ############# BackBone Network sparseCNN to Extract Features #############
-  backbone = ME.MinkowskiSyncBatchNorm.convert_sync_batchnorm(Sparse_Backbone_Minkowski())
-  
-  ############# voxel_pos to position encoding #############
-  position_encoding = PositionEmbeddingSine3D(out_voxel_dim, m*2, normalize=True)
-  
-  ############# build transformer #############
-  corner_transformer = build_transformer(args)
-  curve_transformer = build_transformer(args)
-  patch_transformer = build_transformer(args)
-  
-  ############# build detr model #############
-  model_shape = DETR_Shape(backbone, position_encoding, corner_transformer, curve_transformer, patch_transformer, args.num_queries, aux_loss=args.enable_aux_loss).to(device) #queries equals to 100, no aux loss
-  
-  ############# build matcher #############
-  matcher_corner = build_matcher_corner(args, flag_eval = flag_eval)
-  matcher_curve = build_matcher_curve(args, flag_eval = flag_eval)
-  matcher_patch = build_matcher_patch(args, flag_eval = flag_eval)
-  
-  ############# build criterion #############
-  # corner_weight_dict = {'loss_ce': args.class_loss_coef, 'loss_geometry': args.corner_geometry_loss_coef}
-  # curve_weight_dict = {'loss_valid_ce': args.class_loss_coef, 'loss_geometry': args.curve_geometry_loss_coef, 'loss_curve_closed': 1, 'loss_curve_type_ce':args.class_loss_coef}
-  # patch_weight_dict = {'loss_valid_ce': args.class_loss_coef, 'loss_geometry': args.patch_geometry_loss_coef, 'loss_patch_type_ce':args.class_loss_coef}
-
-  if not flag_eval:
-    corner_weight_dict = {'loss_ce': args.class_loss_coef, 'loss_geometry': args.corner_geometry_loss_coef}
-    curve_weight_dict = {'loss_valid_ce': args.class_loss_coef, 'loss_geometry': args.curve_geometry_loss_coef, 'loss_curve_closed': 1, 'loss_curve_type_ce':args.class_loss_coef}
-    patch_weight_dict = {'loss_valid_ce': args.class_loss_coef, 'loss_geometry': args.patch_geometry_loss_coef, 'loss_patch_type_ce':args.class_loss_coef}
-    if args.enable_aux_loss:
-      aux_weight_dict_corner = {}
-      for i in range(args.dec_layers - 1):
-        aux_weight_dict_corner.update({k + f'_aux_{i}': v for k, v in corner_weight_dict.items()})
-      corner_weight_dict.update(aux_weight_dict_corner)
-      
-      aux_weight_dict_curve = {}
-      for i in range(args.dec_layers - 1):
-        aux_weight_dict_curve.update({k + f'_aux_{i}': v for k, v in curve_weight_dict.items()})
-      curve_weight_dict.update(aux_weight_dict_curve)
-    
-    corner_losses = ['labels', 'cardinality', 'geometry']
-    curve_losses = ['labels', 'cardinality', 'geometry', 'closed_curve', 'curve_type']
-    patch_losses = ['labels', 'cardinality', 'geometry', 'patch_type']
-  else:
-    corner_weight_dict = {'loss_ce': args.class_loss_coef, 'loss_geometry': args.corner_geometry_loss_coef}
-    curve_weight_dict = {'loss_valid_ce': args.class_loss_coef, 'loss_geometry': args.curve_geometry_loss_coef, 'loss_curve_closed': 1, 'loss_curve_type_ce':args.class_loss_coef}
-    patch_weight_dict = {'loss_valid_ce': args.class_loss_coef, 'loss_geometry': args.patch_geometry_loss_coef, 'loss_patch_type_ce':args.class_loss_coef}
-    # corner_losses = ['labels', 'cardinality', 'geometry']
-    corner_losses = ['cd']
-    # curve_losses = ['labels', 'cardinality', 'geometry', 'closed_curve', 'curve_type']
-    curve_losses = ['cd']
-    # patch_losses = ['labels', 'cardinality', 'geometry', 'patch_type']
-    patch_losses = ['cd']
-
-  if args.enable_aux_loss:
-    aux_weight_dict_corner = {}
-    for i in range(args.dec_layers - 1):
-      aux_weight_dict_corner.update({k + f'_aux_{i}': v for k, v in corner_weight_dict.items()})
-    corner_weight_dict.update(aux_weight_dict_corner)
-    
-    aux_weight_dict_curve = {}
-    for i in range(args.dec_layers - 1):
-      aux_weight_dict_curve.update({k + f'_aux_{i}': v for k, v in curve_weight_dict.items()})
-    curve_weight_dict.update(aux_weight_dict_curve)
-  
-  # corner_losses = ['labels', 'cardinality', 'geometry']
-  # curve_losses = ['labels', 'cardinality', 'geometry', 'closed_curve', 'curve_type']
-  # patch_losses = ['labels', 'cardinality', 'geometry', 'patch_type']
-  
-  corner_loss_criterion = SetCriterion_Corner(matcher_corner, corner_weight_dict, corner_eos_coef_cal, corner_losses).to(device)
-  curve_loss_criterion = SetCriterion_Curve(matcher_curve, curve_weight_dict, curve_eos_coef_cal, curve_losses).to(device)
-  patch_loss_criterion = SetCriterion_Patch(matcher_patch, patch_weight_dict, patch_eos_coef_cal, patch_losses).to(device)
-  
-  ############# model statistics and optimizer #############
-  n_parameters_backbone = sum(p.numel() for p in backbone.parameters() if p.requires_grad)
-  n_parameters_detr = sum(p.numel() for p in model_shape.parameters() if p.requires_grad)
-  print('number of params:', n_parameters_backbone, n_parameters_detr)
-  
-  return model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion
-
 class BackBoneWrapper(nn.Module):
     def __init__(self, backbone):
         super().__init__()
@@ -6612,10 +6150,7 @@ def eval_pipeline(flag_eval = True):
   #torch.autograd.set_detect_anomaly(True)
   tf.compat.v1.disable_eager_execution()
   
-  if args.no_tri:
-    model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model(device, flag_eval)
-  else:
-    model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model_tripath(device, flag_eval)
+  model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model_tripath(device, flag_eval)
 
   model_without_ddp = model_shape
   
@@ -6888,7 +6423,6 @@ def pipeline_abc(rank, world_size):
     if args.quicktest:
       train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer) #
 
-      #ori version
       val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False, flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
     else:
       if args.parsenet:
@@ -6910,10 +6444,7 @@ def pipeline_abc(rank, world_size):
   disable_aux_loss_output = True
   #torch.autograd.set_detect_anomaly(True)
   tf.compat.v1.disable_eager_execution()
-  if args.no_tri:
-    model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model(device)
-  else:
-    model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model_tripath(device)
+  model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model_tripath(device)
   
   model_shape = torch.nn.parallel.DistributedDataParallel(model_shape, device_ids=[rank]) #,find_unused_parameters=True
   model_without_ddp = model_shape.module
@@ -6979,38 +6510,9 @@ def pipeline_abc(rank, world_size):
   if(args.eval):
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     return model_evaluation(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations)
-    # return model_evaluation(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion)
   
   training_range = range(start_iterations, args.max_training_iterations)
   if(not running_onCluster and rank == 0): training_range = tqdm(training_range)
-  
-  #testing for validation part
-  # val_data_sampler.set_epoch(0)
-  # distribute_sampler.set_epoch(0)
-  # summary_ref = {}
-  # summary_ref['corner_curve_geom'] = 0.0
-  # summary_ref['corner_curve_topo'] = 0.0
-  # summary_ref['corner_loss_ce'] = 0.0
-  # summary_ref['corner_loss_geometry'] = 0.0
-  # summary_ref['corner_valid_accuracy'] = 0.0
-  # summary_ref['curve_loss_curve_closed'] = 0.0
-  # summary_ref['curve_loss_curve_type_ce'] = 0.0
-  # summary_ref['curve_loss_geometry'] = 0.0
-  # summary_ref['curve_loss_valid_ce'] = 0.0
-  # summary_ref['curve_type_accuracy'] = 0.0
-  # summary_ref['curve_valid_accuracy'] = 0.0
-  # summary_ref['patch_curve_topo'] = 0.0
-  # summary_ref['patch_loss_geometry'] = 0.0
-  # summary_ref['patch_loss_patch_type_ce'] = 0.0
-  # summary_ref['patch_loss_valid_ce'] = 0.0
-  # summary_ref['patch_type_accuracy'] = 0.0
-  # summary_ref['patch_valid_accuracy'] = 0.0
-  # summary_ref['total_loss'] = 0.0
-
-
-  # val_summary_loss_dict = get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, val_data, device, 0, summary_ref)
-  # val_summary_loss_dict_reduced = reduce_dict(val_summary_loss_dict)
-  # return
 
   if(rank == 0):
     summary_writer = tf.compat.v1.summary.FileWriter(log_dir)
@@ -7021,8 +6523,6 @@ def pipeline_abc(rank, world_size):
   val_epochs = 0
   distribute_sampler.set_epoch(cur_epochs)
   for train_iter in training_range:
-      #if(train_iter % 500 == 0): torch.cuda.empty_cache()
-    # with torch.autograd.profiler.profile(enabled=True, use_cuda=True, record_shapes=False, profile_memory=False) as prof:
     if True:
       model_shape.train()
       corner_loss_criterion.train()
@@ -7041,21 +6541,9 @@ def pipeline_abc(rank, world_size):
       features = data_item[1].to(device)
       corner_points = data_item[2].to(device)
       corner_batch_idx = data_item[3].to(device)
-      #print("locations with shape: {}".format(locations.shape))
-      #print("features with shape: {}".format(features.shape))
-      #print("corner points with shape: {}".format(corner_points.shape))
       batch_sample_id = data_item[5]
       target_curves_list = data_item[6]
       target_patches_list = data_item[7]
-      # print('train_iter: ', train_iter)
-      # print('batch id: ', batch_sample_id)
-      # print('patch key outside: ', target_patches_list[0].keys())
-      # print('patch outside patch_points: ', target_patches_list[0]['patch_points']) #list of tensor
-      #not using lr drop temporarily
-      # if (train_iter + 1) % args.lr_drop == 0:
-      #   lr_scheduler.step()
-      # for bsi in batch_sample_id:
-      #   print('sample id: ', bsi)
       #convert target_curves_list and target_patches_list to cuda tensors
       for i in range(len(target_curves_list)):
         for k in target_curves_list[i]:
@@ -7098,78 +6586,6 @@ def pipeline_abc(rank, world_size):
               continue
             wf.write("l {} {}\n".format(i+1, i+2))
       
-      # if(rank == 0 and (train_iter % 500 == 0 or (train_iter % 500 == 0  and train_iter < 1000 and not running_onCluster))):
-      if False:
-        #not save intermediate results anymore
-        # print(batch_sample_id[0])
-        #visualization
-        '''      
-        if not running_onCluster:
-          voxel_points = data_item[8][:,:-1]
-          assert(voxel_points.shape[1] == 3 or voxel_points.shape[1] == 6)
-          if(voxel_points.shape[1] == 3):
-            np.savetxt(os.path.join(obj_dir, "input_voxel_points_{:06d}.xyz".format(train_iter)), voxel_points)
-          else:
-            write_ply(os.path.join(obj_dir, "input_voxel_points_{:06d}.ply".format(train_iter)), voxel_points)
-        '''
-        
-        input_pointcloud = data_item[4][0]
-        np.savetxt(os.path.join(obj_dir, "input_{:06d}_{:06d}.xyz".format(train_iter, int(batch_sample_id[0].replace(".pkl" ,"")))), input_pointcloud)
-        
-        #curves
-        labels = torch.argmax(curve_predictions['pred_curve_logits'].softmax(-1)[0], dim=-1).cpu().numpy()#100, 0 or 1
-        pred_curve_type = curve_type_list[torch.argmax(curve_predictions['pred_curve_type'].softmax(-1)[0], dim=-1).cpu().numpy().astype(np.int32)[np.where(labels == 0)]].tolist()
-        gt_curve_type = curve_type_list[target_curves_list[0]['labels'].cpu().numpy().astype(np.int32)].tolist()
-        with open(os.path.join(obj_dir, "pred_curves_type_{:06d}.txt".format(train_iter)), "w") as f:
-          f.write("{}\n".format(batch_sample_id[0]))
-          f.write("{} {}\n".format(len(pred_curve_type), len(gt_curve_type)))
-          for item in pred_curve_type: f.write("{}\n".format(item))
-          f.write("==============================\n")
-          for item in gt_curve_type: f.write("{}\n".format(item))
-        
-        curve_points = curve_predictions['pred_curve_points'][0].detach().cpu().numpy()
-        effective_curve_points = np.reshape(curve_points[np.where(labels == 0)], [-1,3]) #100 34 3
-        #np.savetxt(os.path.join(obj_dir, "pred_curves_{:06d}.xyz".format(train_iter)), effective_curve_points)
-        export_curves(effective_curve_points, points_per_curve, os.path.join(obj_dir, "pred_curves_{:06d}.obj".format(train_iter)))
-        
-        empty_curve_points = np.reshape(curve_points[np.where(labels == 1)], [-1,3])
-        #np.savetxt(os.path.join(obj_dir, "pred_curves_empty_{:06d}.xyz".format(train_iter)), empty_curve_points)
-        export_curves(empty_curve_points, points_per_curve, os.path.join(obj_dir, "pred_curves_empty_{:06d}.obj".format(train_iter)))
-        
-        target_curve_points = np.reshape(target_curves_list[0]['curve_points'].cpu().numpy(), [-1,3])
-        np.savetxt(os.path.join(obj_dir, "gt_curves_{:06d}.xyz".format(train_iter)), target_curve_points)
-        export_curves(target_curve_points, points_per_curve, os.path.join(obj_dir, "gt_curves_{:06d}.obj".format(train_iter)))
-        
-        #corners
-        labels = torch.argmax(corner_predictions['pred_logits'].softmax(-1)[0], dim=-1).cpu().numpy()
-        corner_position = corner_predictions['pred_corner_position'][0].detach().cpu().numpy()
-        effective_corner_position = corner_position[np.where(labels == 0)]
-        np.savetxt(os.path.join(obj_dir, "pred_corner_{:06d}.xyz".format(train_iter)), effective_corner_position)
-        
-        empty_corner_position = corner_position[np.where(labels == 1)]
-        np.savetxt(os.path.join(obj_dir, "pred_corner_empty_{:06d}.xyz".format(train_iter)), empty_corner_position)
-        
-        target_corner_position = target_corner_points_list[0].cpu().numpy()
-        np.savetxt(os.path.join(obj_dir, "gt_corner_{:06d}.xyz".format(train_iter)), target_corner_position)
-        
-        #locations_out = (np.reshape(sparse_locations[0].cpu().numpy(), [-1,4])[:,1:] + 0.5) / out_voxel_dim - 0.5
-        #np.savetxt(os.path.join(obj_dir, "input_sparse_voxel_{:06d}.xyz".format(train_iter)), locations_out)
-        
-        #patches
-        patch_labels = torch.argmax(patch_predictions['pred_patch_logits'].softmax(-1)[0], dim=-1).cpu().numpy()
-        
-        pred_patch_type = patch_type_list[torch.argmax(patch_predictions['pred_patch_type'].softmax(-1)[0], dim=-1).cpu().numpy().astype(np.int32)[np.where(patch_labels == 0)]].tolist()
-        gt_patch_type = patch_type_list[target_patches_list[0]['labels'].cpu().numpy().astype(np.int32)].tolist()
-        with open(os.path.join(obj_dir, "pred_patches_type_{:06d}.txt".format(train_iter)), "w") as f:
-          f.write("{} {}\n".format(len(pred_patch_type), len(gt_patch_type)))
-          for item in pred_patch_type: f.write("{}\n".format(item))
-          f.write("==============================\n")
-          for item in gt_patch_type: f.write("{}\n".format(item))
-        
-        patch_points = patch_predictions['pred_patch_points'][0].detach().cpu().numpy() #in shape [100, 100*100, 3]
-        effective_patch_points = patch_points[np.where(patch_labels == 0)]
-        export_patches(effective_patch_points, os.path.join(obj_dir, "pred_patches_{:06d}.obj".format(train_iter)))
-      
       if(rank == 0 and train_iter % args.ckpt_interval == 0):
         #save checkpoint
         checkpoint_path = os.path.join(checkpoint_dir, "checkpoint_{:06d}.pth".format(train_iter))
@@ -7183,13 +6599,9 @@ def pipeline_abc(rank, world_size):
       t0 = time.time()
       max_norm = args.clip_max_norm
       #losses
-      #for debugging:
       curve_predictions['sample_names'] = batch_sample_id
       curve_loss_dict, curve_matching_indices = curve_loss_criterion(curve_predictions, target_curves_list)
       
-      #for debugging
-      # curve_loss_dict, curve_matching_indices = curve_loss_criterion(outputs = curve_predictions, target_curves_list = target_curves_list, sample_names = batch_sample_id)
-
       curve_weight_dict = curve_loss_criterion.weight_dict
       corner_loss_dict, corner_matching_indices = corner_loss_criterion(corner_predictions, target_corner_points_list)
       corner_weight_dict = corner_loss_criterion.weight_dict
@@ -7267,11 +6679,9 @@ def pipeline_abc(rank, world_size):
               curve_corner_matching_loss_geom_aux, curve_corner_matching_loss_topo_aux, _ = \
                 Curve_Corner_Matching_v2(corner_predictions['aux_outputs'][aux_id], curve_predictions['aux_outputs'][aux_id], target_corner_points_list, target_curves_list, corner_matching_indices['aux_outputs'][aux_id]['indices'], curve_matching_indices['aux_outputs'][aux_id]['indices'])
               losses += args.curve_corner_geom_loss_coef*curve_corner_matching_loss_geom_aux + args.curve_corner_topo_loss_coef*curve_corner_matching_loss_topo_aux
-              #summary_loss_dict['corner_curve_topo_aux_'+str(aux_id)] = args.curve_corner_topo_loss_coef*curve_corner_matching_loss_topo_aux.cpu().detach().numpy()
         elif(train_iter == 0 and rank == 0):
           print("without curve corner correspondence loss")
         
-        # print("all zero corners: ", all_zero_corners)
         if(args.patch_curve_topo_loss_coef > 0):
           if not args.topo_acc:
             if args.ori_topo:
@@ -7306,7 +6716,6 @@ def pipeline_abc(rank, world_size):
             patch_corner_matching_loss_topo, curve_point_loss, curve_patch_loss, patch_close_loss, patch_corner_topo_acc = \
               Patch_Corner_Matching_tripath(corner_predictions, curve_predictions, patch_predictions, target_corner_points_list, target_curves_list, target_patches_list, corner_matching_indices['indices'],curve_matching_indices['indices'], patch_matching_indices['indices'])
           losses += args.patch_corner_topo_loss_coef*patch_corner_matching_loss_topo
-          #four other term: 
           losses += args.topo_loss_coef * curve_point_loss
           losses += args.topo_loss_coef * curve_patch_loss
           losses += args.topo_loss_coef * patch_close_loss
@@ -7323,13 +6732,10 @@ def pipeline_abc(rank, world_size):
               summary_loss_dict['patch_close_loss'] = args.topo_loss_coef * patch_close_loss.detach()
 
       summary_loss_dict['total_loss'] = losses.detach()
-      # summary_loss_dict_reduced = reduce_dict(summary_loss_dict)
       if(running_onCluster and train_iter % 200 == 0):
         summary_loss_dict_reduced = reduce_dict(summary_loss_dict)
       elif not running_onCluster:
         summary_loss_dict_reduced = reduce_dict(summary_loss_dict)
-      # print('summary dict: ', summary_loss_dict)
-      # print('summary dict reduced: ', summary_loss_dict_reduced)
       if(rank == 0):
         if(running_onCluster and train_iter % 200 == 0):
           now = datetime.now()
@@ -7346,7 +6752,6 @@ def pipeline_abc(rank, world_size):
       if train_iter % 1000 == 0:
         # reduce losses over all GPUs for logging purposes
         loss_dict_reduced = reduce_dict(corner_loss_dict)
-        #loss_dict_reduced_unscaled = {f'{k}_unscaled': v for k, v in loss_dict_reduced.items()}
         loss_dict_reduced_scaled = {k: v * corner_weight_dict[k] for k, v in loss_dict_reduced.items() if k in corner_weight_dict}
         losses_reduced_scaled = sum(loss_dict_reduced_scaled.values())
         loss_value = losses_reduced_scaled.item()
@@ -7358,7 +6763,6 @@ def pipeline_abc(rank, world_size):
             sys.exit(1)
         
         loss_dict_reduced = reduce_dict(curve_loss_dict)
-        #loss_dict_reduced_unscaled = {f'{k}_unscaled': v for k, v in loss_dict_reduced.items()}
         loss_dict_reduced_scaled = {k: v * curve_weight_dict[k] for k, v in loss_dict_reduced.items() if k in curve_weight_dict}
         losses_reduced_scaled = sum(loss_dict_reduced_scaled.values())
         loss_value = losses_reduced_scaled.item()
@@ -7369,32 +6773,25 @@ def pipeline_abc(rank, world_size):
             print(batch_sample_id)
             sys.exit(1)
       t1 = time.time()
-      #print("{}s elapsed for matching and compute loss".format(t1-t0))
       if(train_iter < profile_iter and perform_profile and train_iter > 2):
         profile_dict['loss_computation'].append(t1 - t0)
       
       t0 = time.time()
       optimizer.zero_grad()
 
-      # print('tmp size:', corner_matching_indices['indices'][0].shape)
       if not args.no_topo:
         if(all_zero_corners): #if all zero exists, then add weight decay
           for params in list(corner_topo_params.values()):
             losses += 1e-8*torch.norm(params)
-            #params.grad = torch.ones_like(params)
           for params in list(corner_geometry_params.values()):
             losses += 1e-8*torch.norm(params)
-            #params.grad = torch.ones_like(params)
       else:
         cur_num_corner = sum([len(corner_matching_indices['indices'][i][0]) for i in range(len(corner_matching_indices['indices']))])
         cur_num_curve = sum([len(curve_matching_indices['indices'][i][0]) for i in range(len(curve_matching_indices['indices']))])
         cur_num_patch = sum([len(patch_matching_indices['indices'][i][0]) for i in range(len(patch_matching_indices['indices']))])
-        # print('num corner: {} num curve: {} num patch: {}'.format(cur_num_corner, cur_num_curve, cur_num_patch))
         if cur_num_corner == 0 or cur_num_curve == 0 or cur_num_patch == 0:
-        # if True:
           for params in list(corner_topo_params.values()):
             losses += 1e-8*torch.norm(params)
-            #params.grad = torch.ones_like(params)
           for params in list(corner_geometry_params.values()):
             losses += 1e-8*torch.norm(params)
       
@@ -7411,45 +6808,29 @@ def pipeline_abc(rank, world_size):
             torch.nn.utils.clip_grad_value_(model_shape.parameters(), max_norm)
       optimizer.step()
       t1 = time.time()
-      #print("{}s elapsed for compute gradients and descent".format(t1-t0))
       if(rank == 0 and train_iter < profile_iter and perform_profile and train_iter > 2):
         profile_dict['gradient_computation'].append(t1 - t0)
         if(train_iter == profile_iter - 1):
           for profile_item in profile_dict:
             print(profile_item)
             stat = np.array(profile_dict[profile_item])
-            # print(stat)
-            # print(stat.min(), stat.max(), stat.mean())
             print("mean: ", stat.mean())
           break
-      # #for testing data
       flag_val = False
       if running_onCluster:
-        # if train_iter % 300 == 0:
         if train_iter % 15000 == 0:
-        # if train_iter % 15000 == 0:
-        # if train_iter % 10 == 0:
           flag_val = True
       else:
         if train_iter % 10 == 0:
           flag_val = True
       if flag_val:
-        # print ("validation!")
         val_data_sampler.set_epoch(val_epochs)
         val_epochs += 1
-        #summary_loss owned only by gpu 0
         val_summary_loss_dict = get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, val_data, device, 0, summary_loss_dict)
         val_summary_loss_dict_reduced = reduce_dict(val_summary_loss_dict)
         if rank == 0:
           test_summary = tf_summary_from_dict(val_summary_loss_dict_reduced, False) 
-          # test_summary = tf_summary_from_dict(val_summary_loss_dict, False) 
-          # print(test_summary)   
           summary_writer.add_summary(tf.compat.v1.Summary(value=test_summary), train_iter)
-
-          # #for testing
-          # print("val dict")
-          # print(val_summary_loss_dict_reduced)
-          # model_evaluation(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, val_data, device, train_iter)
           summary_writer.flush()
 
 if __name__ == '__main__':

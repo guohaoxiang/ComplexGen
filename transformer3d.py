@@ -1301,7 +1301,7 @@ def build_transformer_tripath(args):
             num_corner_queries= args.num_corner_queries,
             num_curve_queries= args.num_curve_queries, 
             num_patch_queries= args.num_patch_queries, 
-            flag_decouple_pos_content = args.decouple_pos_content, 
+            flag_decouple_pos_content = False, 
             flag_no_tripath = args.no_tripath
         )
 
