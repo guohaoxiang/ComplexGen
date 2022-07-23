@@ -45,7 +45,6 @@ class TransformerMultipath(nn.Module):
         self.d_model = d_model
         self.nhead = nhead
         self.n_path = n_path
-        # self.n_queries = num_queries
 
     def _reset_parameters(self):
         for p in self.parameters():
@@ -55,17 +54,10 @@ class TransformerMultipath(nn.Module):
     def forward(self, src, mask, query_embed_list, pos_embed, primitive_type_embed=None,src_attention_mask=None):
         #input shape: HWxNxC
         hw, bs, c = src.shape
-        #src = src.flatten(2).permute(2, 0, 1)
-        #pos_embed = pos_embed.flatten(2).permute(2, 0, 1)
-        # query_embed = query_embed.unsqueeze(1).repeat(1, bs, 1)
-        
         query_embed_list_new = []
         for i in range(self.n_path):
-            # query_embed_list[i] = query_embed_list[i].unsqueeze(1).repeat(1, bs, 1)
             query_embed_list_new.append(query_embed_list[i].unsqueeze(1).repeat(1, bs, 1))
-        # query_embed_list_new = torch.stack(query_embed_list_new, 0)
 
-        # tgt = torch.zeros_like(query_embed)
         tgt_list = []
         for i in range(self.n_path):
             tgt_list.append(torch.zeros_like(query_embed_list_new[i]))
@@ -74,8 +66,6 @@ class TransformerMultipath(nn.Module):
           memory = self.encoder(src, mask = src_attention_mask, src_key_padding_mask=mask, pos=pos_embed)
         else:
           memory = src
-        # hs = self.decoder(tgt, memory, memory_key_padding_mask=mask,
-        #                   pos=pos_embed, query_pos=query_embed) #all outputs from all layers
 
         hs_list = self.decoder(tgt_list, memory, memory_key_padding_mask=mask, pos=pos_embed, query_pos_list = query_embed_list_new,primitive_type_embed = primitive_type_embed)
 
@@ -83,7 +73,6 @@ class TransformerMultipath(nn.Module):
             hs_list[i] = hs_list[i].transpose(1,2)
 
         return hs_list, memory.permute(1, 2, 0).view(bs, c, hw)
-        # return hs.transpose(1, 2), memory.permute(1, 2, 0).view(bs, c, hw)
 
 
 class TransformerEncoder(nn.Module):
@@ -116,25 +105,10 @@ class TransformerDecoderMultipath(nn.Module):
         layers = _get_clones(decoder_layer, num_layers) #will be released after the copy
         self.layers_list = _get_clones(layers, n_path)
 
-        # self.layers1 = _get_clones(decoder_layer, num_layers)
-        # self.layers2 = _get_clones(decoder_layer, num_layers)
-        # self.layers3 = _get_clones(decoder_layer, num_layers)
-        # self.layers_list = []
-        # self.layers_list.append(self.layers1)
-        # self.layers_list.append(self.layers2)
-        # self.layers_list.append(self.layers3)
-        # self.layers_list = _get_clones(self.layers, n_path)
-
-        # self.layers_list = []
-        # for i in range(n_path):
-        #     self.layers_list.append(_get_clones(decoder_layer, num_layers))
         self.num_layers = num_layers
-        # self.norm = norm
-        #norm is not none
         self.norm_list = _get_clones(norm, n_path)
         self.return_intermediate = return_intermediate #true
         self.n_path = n_path
-        # self.num_queries = num_queries
         self.num_corner_queries = num_corner_queries
         self.num_curve_queries = num_curve_queries
         self.num_patch_queries = num_patch_queries
@@ -149,12 +123,6 @@ class TransformerDecoderMultipath(nn.Module):
                 ):
         assert(len(query_pos_list) == self.n_path)
         assert(len(tgt_list) == self.n_path)
-        
-        #memory: 300,1,192
-        # not used voxel type embed since 0430
-        # memory = memory + primitive_type_embed[0]
-        #source redefined later
-        # pos_cross_ori = F.pad(pos, (0, 0, 0, 0, 2 * self.num_queries, 0), value=0) #to be changed, add poss encodeding
         pos_cross_list = [] #only for 3 types
         for iter1 in range(self.n_path):
             idlist = list(range(self.n_path))
@@ -162,17 +130,8 @@ class TransformerDecoderMultipath(nn.Module):
             pos_embed_list = []
             assert(len(idlist) == self.n_path - 1)
             for id in idlist:
-                #output selfatt: 100,1,192
-                # feature_list.append((output_selfatt[id] + primitive_type_embed[id + 1]))
                 pos_embed_list.append(query_pos_list[id])
-            # feature_list.append(memory)
-            # pos_embed_list.append(pos)
             pos_cross_list.append(torch.cat(pos_embed_list, dim=0))
-            # memory_cross.append(torch.cat(feature_list, dim=0))    
-        
-        #this is not correct, value should be true
-        # memory_key_padding_mask_cross = F.pad(memory_key_padding_mask, (2 * self.num_queries, 0), value=False)
-        
 
         output_list = tgt_list
         intermediate_list = []
@@ -195,13 +154,10 @@ class TransformerDecoderMultipath(nn.Module):
             output_normalize = []
             for i in range(self.n_path):
                 output_normalize.append(self.layers_list[i][j].norm2(output_list[i]))
-                # output_normalize.append(output_list[i])
-            
             if not self.flag_no_tripath:
                 val_cross = [] #only for 3 types, without pritimive embedding
                 # type_embed_cross = []
                 key_wo_pos = []
-                # assert(self.n_path == 3)
                 for iter1 in range(self.n_path):
                     idlist = list(range(self.n_path))
                     idlist.remove(iter1)
@@ -210,34 +166,14 @@ class TransformerDecoderMultipath(nn.Module):
                     assert(len(idlist) == self.n_path - 1)
                     for id in idlist:
                         #output selfatt: 100,1,192
-                        # feature_list.append((output_selfatt[id] + primitive_type_embed[id]))
                         val_list.append(output_normalize[id])
-                        # print('normalize shape {} pte shape {}'.format(output_normalize[id].shape, primitive_type_embed[id].shape))
                         key_list.append(output_normalize[id] + primitive_type_embed[id])
-                        # type_embed_list.append(primitive_type_embed[id])
-                    # feature_list.append(memory)
                     val_cross.append(torch.cat(val_list, dim=0))
                     key_wo_pos.append(torch.cat(key_list, dim=0))
-                    # type_embed_cross.append(torch.cat(type_embed_list, dim=0))
             
                 #stage 2 1
                 output_stage2_res = []
                 for i in range(self.n_path):
-                    # output_list[i] = self.layers_list[i][j](output_list[i], memory_cross[i], tgt_mask=tgt_mask,
-                    #             memory_mask=memory_mask,
-                    #             tgt_key_padding_mask=tgt_key_padding_mask,
-                    #             memory_key_padding_mask=memory_key_padding_mask_cross,
-                    #             pos=pos_cross, query_pos=query_pos_list[i], stage = 2, tgt2 = output_selfatt[i])
-                    # output_stage2_res.append(self.layers_list[i][j](output_list[i], val_cross[i],           tgt_mask=tgt_mask,
-                    #             memory_mask=memory_mask,
-                    #             tgt_key_padding_mask=tgt_key_padding_mask,
-                    #             memory_key_padding_mask=memory_key_padding_mask_cross,
-                    #             pos=pos_cross_list[i], query_pos=query_pos_list[i], stage = 2, type_embed = type_embed_cross[i]))
-                    
-                    #tgt_mask:None
-                    #memory_mask: None
-                    #tgt_key_padding_mask: None
-                    #memory_mask_key_padding is usable
 
                     output_stage2_res.append(self.layers_list[i][j](output_normalize[i], val_cross[i], tgt_mask=tgt_mask,
                                 memory_mask=memory_mask,
@@ -260,15 +196,8 @@ class TransformerDecoderMultipath(nn.Module):
             #stage 3:
             output_stage3_res = []
             for i in range(self.n_path):
-                # output_list[i] = self.layers_list[i][j](output_list[i], memory_cross[i], tgt_mask=tgt_mask,
-                #             memory_mask=memory_mask,
-                #             tgt_key_padding_mask=tgt_key_padding_mask,
-                #             memory_key_padding_mask=memory_key_padding_mask_cross,
-                #             pos=pos_cross, query_pos=query_pos_list[i], stage = 2, tgt2 = output_selfatt[i])
                 output_stage3_res.append(self.layers_list[i][j](output_list[i], memory=None, stage = 4))
-
                 output_list[i] = output_stage3_res[i] + output_list[i]     
-
                 if self.return_intermediate:
                     intermediate_list[i].append(self.norm_list[i](output_list[i]))
         
@@ -279,31 +208,6 @@ class TransformerDecoderMultipath(nn.Module):
                 if self.return_intermediate:
                     intermediate_list[i].pop()
                     intermediate_list[i].append(output_list[i])
-            # output_list.append(output)
-            # intermediate_list.append(intermediate)
-
-        # for i in range(self.n_path):
-        #     output = tgt_list[i]
-        #     #to be changed
-        #     intermediate = []
-        #     # for layer in self.layers_list[i]:
-        #     for j in range(self.num_layers):
-        #         output = self.layers_list[i][j](output, memory, tgt_mask=tgt_mask,
-        #                     memory_mask=memory_mask,
-        #                     tgt_key_padding_mask=tgt_key_padding_mask,
-        #                     memory_key_padding_mask=memory_key_padding_mask,
-        #                     pos=pos, query_pos=query_pos_list[i])
-        #         if self.return_intermediate:
-        #             intermediate.append(self.norm_list[i](output))
-
-        #     if self.norm_list[0] is not None:
-        #         output = self.norm_list[i](output)
-        #         if self.return_intermediate:
-        #             intermediate.pop()
-        #             intermediate.append(output)
-        #     output_list.append(output)
-        #     intermediate_list.append(intermediate)
-
 
         if self.return_intermediate:
             for i in range(self.n_path):
@@ -314,12 +218,6 @@ class TransformerDecoderMultipath(nn.Module):
             output_list[i] = output_list[i].unsqueeze(0)
         
         return output_list
-
-        # if self.return_intermediate:
-        #     return torch.stack(intermediate)#all layer info
-        
-        
-        # return output.unsqueeze(0)
 
 
 class TransformerEncoderLayer(nn.Module):
@@ -420,10 +318,8 @@ class TransformerDecoderLayerMultipath(nn.Module):
         self.linear2 = nn.Linear(dim_feedforward, d_model)
 
         self.norm1 = nn.LayerNorm(d_model)
-        # if not flag_no_tripath:
         self.norm2 = nn.LayerNorm(d_model)
         self.norm3 = nn.LayerNorm(d_model)
-        # self.norm_twotype = nn.LayerNorm(d_model)
 
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
@@ -496,18 +392,6 @@ class TransformerDecoderLayerMultipath(nn.Module):
         q = k = self.with_pos_embed(tgt2, query_pos) # query pose
         tgt2 = self.self_attn(q, k, value=tgt2, attn_mask=tgt_mask,
                               key_padding_mask=tgt_key_padding_mask)[0]
-        # tgt = tgt + self.dropout1(tgt2) #no dropout
-        # tgt2 = self.norm2(tgt)
-        # tgt2 = self.multihead_attn(query=self.with_pos_embed(tgt2, query_pos),
-        #                            key=self.with_pos_embed(memory, pos),
-        #                            value=memory, attn_mask=memory_mask,
-        #                            key_padding_mask=memory_key_padding_mask)[0]
-        # tgt = tgt + self.dropout2(tgt2)
-        # tgt2 = self.norm3(tgt)
-        # tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt2))))
-        # tgt = tgt + self.dropout3(tgt2)
-        # return tgt2
-        #return res
         return tgt2
 
     def forward_pre_stage2_twotype(self, tgt2, memory,
@@ -518,16 +402,6 @@ class TransformerDecoderLayerMultipath(nn.Module):
                     pos: Optional[Tensor] = None,
                     query_pos: Optional[Tensor] = None,
                     key_wo_pos: Optional[Tensor] = None):
-        # tgt2 = self.norm1(tgt)
-        # q = k = self.with_pos_embed(tgt2, query_pos) # query pose
-        # tgt2 = self.self_attn(q, k, value=tgt2, attn_mask=tgt_mask,
-        #                       key_padding_mask=tgt_key_padding_mask)[0]
-        # tgt = tgt + self.dropout1(tgt2)
-        # tgt2 = self.norm2(tgt)
-        # tgt2 = tgt
-        
-        # tgt2 = self.norm2(tgt2) #normalzied before
-        # memory = self.norm_twotype(memory)
         if not self.flag_decouple_pos_content:
             tgt2 = self.multihead_attn(query=self.with_pos_embed(tgt2, query_pos),
                                    key=self.with_pos_embed(key_wo_pos, pos),
@@ -558,12 +432,6 @@ class TransformerDecoderLayerMultipath(nn.Module):
                                     key=k,
                                     value=v, attn_mask=memory_mask,
                                     key_padding_mask=memory_key_padding_mask)[0] 
-        # tgt = tgt + self.dropout2(tgt2)
-        # #stage 3
-        # tgt2 = self.norm3(tgt)
-        # tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt2))))
-        # tgt = tgt + self.dropout3(tgt2)
-        # return tgt
         return tgt2
 
     def forward_pre_stage2_voxel(self, tgt2, memory,
@@ -574,25 +442,12 @@ class TransformerDecoderLayerMultipath(nn.Module):
                     pos: Optional[Tensor] = None,
                     query_pos: Optional[Tensor] = None,
                     key_wo_pos: Optional[Tensor] = None):
-        # tgt2 = self.norm1(tgt)
-        # q = k = self.with_pos_embed(tgt2, query_pos) # query pose
-        # tgt2 = self.self_attn(q, k, value=tgt2, attn_mask=tgt_mask,
-        #                       key_padding_mask=tgt_key_padding_mask)[0]
-        # tgt = tgt + self.dropout1(tgt2)
-        # tgt2 = self.norm2(tgt)
-        # tgt2 = tgt
-        
-        # tgt2 = self.norm2(tgt2) #normalzied before
-        # memory = self.norm_twotype(memory)
         if not self.flag_decouple_pos_content:
             tgt2 = self.multihead_attn_voxel(query=self.with_pos_embed(tgt2, query_pos),
                                    key=self.with_pos_embed(memory, pos),
                                    value=memory, attn_mask=memory_mask,
                                    key_padding_mask=memory_key_padding_mask)[0]
         else:
-            # tgt2 = self.multihead_attn_voxel(query=self.with_pos_embed_decouple_pos_content(tgt2, query_pos),key=self.with_pos_embed_decouple_pos_content(memory, pos),
-            #                        value=memory, attn_mask=memory_mask,
-            #                        key_padding_mask=memory_key_padding_mask)[0]
 
             q_content = self.voxel_ca_qcontent(tgt2)
             k_content = self.voxel_ca_kcontent(memory)
@@ -619,12 +474,6 @@ class TransformerDecoderLayerMultipath(nn.Module):
                                     value=v, attn_mask=memory_mask,
                                     key_padding_mask=memory_key_padding_mask)[0]     
 
-        # tgt = tgt + self.dropout2(tgt2)
-        # #stage 3
-        # tgt2 = self.norm3(tgt)
-        # tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt2))))
-        # tgt = tgt + self.dropout3(tgt2)
-        # return tgt
         return tgt2
 
 
