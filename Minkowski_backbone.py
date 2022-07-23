@@ -6687,8 +6687,6 @@ def eval_pipeline(flag_eval = True):
   if not args.evalfinal and not args.evaltopo:
     return model_evaluation(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output, test_folder = test_folder)
   elif args.evalfinal:
-    # return model_evaluation_from_file(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output)
-
     return model_evaluation_yaml(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output)
 
   elif args.evaltopo:
