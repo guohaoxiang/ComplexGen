@@ -1194,9 +1194,6 @@ class DETR_Shape_Tripath(nn.Module):
         else:
           self.primitive_type_embed = None
           
-        
-        #query embedding
-        #corner
         self.query_embed_corner = nn.Embedding(num_corner_queries, hidden_dim)
         self.query_embed_curve = nn.Embedding(num_curve_queries, hidden_dim)
         self.query_embed_patch = nn.Embedding(num_patch_queries, hidden_dim)
@@ -1206,42 +1203,18 @@ class DETR_Shape_Tripath(nn.Module):
         if perform_profile:
           t0 = time.time()
         voxel_features, voxel_position_encoding, voxel_features_padding_mask, sparse_locations, attention_mask = self.backbone(locations, features)
-        #locations: 15935,4
-        #features: 15935,4
-        #voxel_features: 300,1,192
-        #voxel_position_encoding: 300,1,192
-        #voxel_features_padding_mask: 1, 300
-        # sparse_locations: tuple, 0,7,10
-        #attention_mask: none
         if perform_profile:
           t1 = time.time()
           profile_dict['backbone_forwarding'].append(t1 - t0)
-
-        
-        #feature: pos, location and sparse location should be the same
-        # corner_predictions, corner_query_features = self.corner_model(voxel_features, voxel_position_encoding, voxel_features_padding_mask, attention_mask)
-        # #print("corner_query_features.shape =", corner_query_features.shape) #in shape [2, 100, 192]
-        # #print("voxel_features.shape = ", voxel_features.shape, " voxel_position_encoding.shape", voxel_position_encoding.shape) [1598, 2, 192]
-        # #print(self.primitive_type_embed.weight)
-        # curve_predictions, curve_query_features = self.curve_model(voxel_features, voxel_position_encoding, voxel_features_padding_mask, attention_mask, corner_query_features=corner_query_features, primitive_type_embed=self.primitive_type_embed.weight)
-        # patch_predictions                       = self.patch_model(voxel_features, voxel_position_encoding, voxel_features_padding_mask, attention_mask, curve_query_features=curve_query_features, primitive_type_embed=self.primitive_type_embed.weight)
-        
-       
 
         #transformer part
         src = voxel_features
         pos = voxel_position_encoding
         mask = voxel_features_padding_mask
-        # print(src.device, mask.device, self.query_embed_corner.weight.device, pos.device)
-        #t1 = time.time()
-        #print("{}s elapsed for prepare data for transformer and encoding position".format(t1-t0))
-        
-        #t0 = time.time()
         #ori code
         if perform_profile:
           t0 = time.time()
 
-        # print('src shape {} pos shape {} mask shape {}'.format(src.shape, pos.shape, mask.shape))
         assert mask is not None
         query_list = [self.query_embed_corner.weight, self.query_embed_curve.weight,self.query_embed_patch.weight]
         if not args.no_tripath:
@@ -1249,14 +1222,10 @@ class DETR_Shape_Tripath(nn.Module):
         else:
           hs_corner, hs_curve, hs_patch = self.tripath_transformer(src, mask, query_list, pos, primitive_type_embed = None, src_attention_mask=attention_mask)[0] #self.input_proj, the first element
 
-        # print('hs corner: {} curve: {} patch: {}'.format(hs_corner.shape, hs_curve.shape, hs_patch.shape))
-        #hs_corner: 6,1,100,192, 6 meanslayer
         if perform_profile:
           t1 = time.time()
           profile_dict['transformer_forwarding'].append(t1 - t0)
 
-
-        #using transformer to get hs_corner, hs_curve, hs_patch
         if perform_profile:
           t0 = time.time()
         if args.vis_inter_layer == -1:
@@ -1277,7 +1246,6 @@ class DETR_Shape_Tripath(nn.Module):
         
 
 def output_prediction(filename, corner_predictions, curve_predictions, patch_predictions, corners_gt, curves_gt, patches_gt, corner_matching_indices, curve_matching_indices, patch_matching_indices, sample_id, sample_batch_idx=0):
-  # print('save pkl begin')
   assert(len(corners_gt) == len(curves_gt) and len(curves_gt) == len(patches_gt))
   assert(sample_batch_idx < len(corners_gt))
   
@@ -1298,7 +1266,6 @@ def output_prediction(filename, corner_predictions, curve_predictions, patch_pre
   Result['corners']['prediction']['position'] = corner_predictions['pred_corner_position'][sample_batch_idx].detach().cpu().numpy()
   Result['corners']['prediction']['valid_prob'] = np.reshape(corner_predictions['pred_logits'].softmax(-1)[sample_batch_idx].detach().cpu().numpy(), [-1,2])[:,0]
   Result['corners']['corner_matching_indices'] = corner_matching_indices['indices'][sample_batch_idx]
-  
   Result['corners']['corner_matching_indices'] = (Result['corners']['corner_matching_indices'][0].cpu().numpy(), Result['corners']['corner_matching_indices'][1].cpu().numpy())
 
   #curves  
@@ -1324,7 +1291,6 @@ def output_prediction(filename, corner_predictions, curve_predictions, patch_pre
   Result['patches']['gt']['type'] = cur_patches_gt['labels'].cpu().numpy().astype(np.int32)
   if args.save_gt:
     Result['patches']['gt']['points'] = [item.cpu().numpy() for item in cur_patches_gt['patch_points']]
-    
   
   Result['patches']['prediction'] = {}
   Result['patches']['prediction']['valid_prob'] = patch_predictions['pred_patch_logits'].softmax(-1)[sample_batch_idx].detach().cpu().numpy()[:,0]
@@ -1335,7 +1301,6 @@ def output_prediction(filename, corner_predictions, curve_predictions, patch_pre
   
   if args.patch_close:
     Result['patches']['prediction']['closed_prob'] = np.reshape((patch_predictions['closed_patch_logits'].softmax(-1)[sample_batch_idx]).detach().cpu().numpy(), [-1,2])[:,1]
-    
 
   Result['patches']['patch_matching_indices'] = patch_matching_indices['indices'][sample_batch_idx]
 
@@ -1362,15 +1327,11 @@ def output_prediction(filename, corner_predictions, curve_predictions, patch_pre
       curve_predictions_topo_embed_corner = curve_predictions['curve_topo_embed_corner'][sample_batch_idx] #in shape[100, 192]
       curve_predictions_topo_embed_patch = curve_predictions['curve_topo_embed_patch'][sample_batch_idx] #in shape[100, 192]
       patch_predictions_topo_embed_curve = patch_predictions['patch_topo_embed_curve'][sample_batch_idx] #in shape[100, 192]
-      Result['curve_corner_similarity'] = torch.sigmoid(torch.mm(curve_predictions_topo_embed_corner, corner_predictions_topo_embed_curve.transpose(0,1))).detach().cpu().numpy() #in shape [100, 100]
-      #patch-curve topology
-      Result['patch_curve_similarity'] = torch.sigmoid(torch.mm(patch_predictions_topo_embed_curve, curve_predictions_topo_embed_patch.transpose(0,1))).detach().cpu().numpy() #in shape [100, 100]
-      #patch corner
+      Result['curve_corner_similarity'] = torch.sigmoid(torch.mm(curve_predictions_topo_embed_corner, corner_predictions_topo_embed_curve.transpose(0,1))).detach().cpu().numpy()
+      Result['patch_curve_similarity'] = torch.sigmoid(torch.mm(patch_predictions_topo_embed_curve, curve_predictions_topo_embed_patch.transpose(0,1))).detach().cpu().numpy()
       corner_predictions_topo_embed_patch = corner_predictions['corner_topo_embed_patch'][sample_batch_idx] #in shape [100, 192]
       patch_predictions_topo_embed_corner = patch_predictions['patch_topo_embed_corner'][sample_batch_idx] #in shape[100, 192]
-      Result['patch_corner_similarity'] = torch.sigmoid(torch.mm(patch_predictions_topo_embed_corner, corner_predictions_topo_embed_patch.transpose(0,1))).detach().cpu().numpy() #in shape [100, 100]
-      
-  # print('save pkl')
+      Result['patch_corner_similarity'] = torch.sigmoid(torch.mm(patch_predictions_topo_embed_corner, corner_predictions_topo_embed_patch.transpose(0,1))).detach().cpu().numpy() 
   with open(filename, "wb") as wf:
     pickle.dump(Result, wf)
   
@@ -1390,38 +1351,22 @@ def Curve_Corner_Matching_tripath(corner_predictions, curve_predictions, corners
     #for samples in each batch seperately
     assert(len(corners_gt) == args.batch_size)
     assert(len(corners_gt) == len(curves_gt))
-    
     topo_correspondence_loss = []
     topo_geometry_loss = []
     topo_correspondence_acc = []
-    
     device = corner_predictions['pred_logits'].device
-    
     zero_corners_examples = 0
     for i in range(len(corners_gt)):
       #no corners thus we do not have to compute
-      # if(corners_gt[i].shape[0] == 0):
       if(corners_gt[i].shape[0] == 0 or corner_indices[i][0].shape[0]==0):
-        #print("zero corners", i)
         zero_corners_examples += 1
         continue
-      #compute pairwise dot product
       if True:
         corner_predictions_topo_embed = corner_predictions['corner_topo_embed_curve'][i] #in shape [100, 192]
         curve_predictions_topo_embed = curve_predictions['curve_topo_embed_corner'][i] #in shape[100, 192]
       
-      #select matched curve and corners
       cur_corner_indices = corner_indices[i] #a tuple
       cur_curve_indices = curve_indices[i] #a tuple
-      
-      # corner_correspondence = torch.zeros_like(cur_corner_indices[0])
-      # corner_correspondence[cur_corner_indices[1]] = cur_corner_indices[0]
-      
-      # curve_correspondence = torch.zeros_like(cur_curve_indices[0])
-      # curve_correspondence[cur_curve_indices[1]] = cur_curve_indices[0]
-      
-      # valid_corner_predictions_topo_embed = corner_predictions_topo_embed[corner_correspondence]
-      # valid_curve_predictions_topo_embed = curve_predictions_topo_embed[curve_correspondence]
       valid_corner_predictions_topo_embed = corner_predictions_topo_embed[cur_corner_indices[0]]
       valid_curve_predictions_topo_embed = curve_predictions_topo_embed[cur_curve_indices[0]]
       
@@ -1436,128 +1381,36 @@ def Curve_Corner_Matching_tripath(corner_predictions, curve_predictions, corners
         curve_corner_similarity = torch.sigmoid(torch.einsum("ahf,bhf->abh", (valid_curve_predictions_topo_embed[open_curve_idx]).view(-1, args.num_heads_dot, args.topo_embed_dim//args.num_heads_dot), valid_corner_predictions_topo_embed.view(-1, args.num_heads_dot, args.topo_embed_dim//args.num_heads_dot)).max(-1).values)
       else:
         curve_corner_similarity = torch.sigmoid(torch.mm(valid_curve_predictions_topo_embed[open_curve_idx], valid_corner_predictions_topo_embed.transpose(0,1))) #in shape [valid_open_curves, valid_corners]
-      #print(curve_corner_similarity)
-      #print(curve_corner_similarity.shape)        
       
       curve2corner_gt = cur_curves_gt['endpoints'][cur_curve_indices[1]][open_curve_idx] #selects open ones
-      # print(curve2corner_gt)
-      '''
-      print(curve2corner_gt)
-      #write curves according to corner position and curve corner correspondences
-      with open("gt_tmp_curve.obj", "w") as tmp_obj_file:
-        for corner_position in corners_gt[i]:
-          tmp_obj_file.write("v {} {} {}\n".format(corner_position[0], corner_position[1], corner_position[2]))
-        for curve_endpoints in curve2corner_gt:
-          tmp_obj_file.write("l {} {}\n".format(curve_endpoints[0] +1, curve_endpoints[1]+1))
-      with open("pred_tmp_curve.obj", "w") as tmp_obj_file:
-        for corner_position in corner_correspondence:
-          tmp_obj_file.write("v {} {} {}\n".format(corner_predictions['pred_corner_position'][i][corner_position][0], corner_predictions['pred_corner_position'][i][corner_position][1], corner_predictions['pred_corner_position'][i][corner_position][2]))
-        for curve_endpoints in curve2corner_gt:
-          tmp_obj_file.write("l {} {}\n".format(curve_endpoints[0] +1, curve_endpoints[1]+1))
-      input()
-      '''
       assert(len(open_curve_idx) == 1)
       
-      # max_corner = torch.zeros(1).type(torch.LongTensor)
       max_corner = 0
       if not curve2corner_gt.shape[0] == 0:
-        # max_corner = torch.max(max_corner, curve2corner_gt.type(torch.LongTensor).max())
         max_corner = max(max_corner, curve2corner_gt.type(torch.LongTensor).max().item())
       if not cur_corner_indices[1].shape[0] == 0:
-        # max_corner = torch.max(max_corner, cur_corner_indices[1].type(torch.LongTensor).max())
         max_corner = max(max_corner, cur_corner_indices[1].max().item())
-
-      # max_corner = torch.max(curve2corner_gt.max(), cur_corner_indices[1].max())
-      # gt_curve_corner_correspondence = torch.zeros([open_curve_idx[0].shape[0], max_corner.item() + 1])
       gt_curve_corner_correspondence = torch.zeros([open_curve_idx[0].shape[0], int(max_corner) + 1], device = corner_predictions['pred_logits'].device)
-
       gt_curve_corner_correspondence[torch.arange(curve2corner_gt.shape[0]), curve2corner_gt[:,0]] = 1
       gt_curve_corner_correspondence[torch.arange(curve2corner_gt.shape[0]), curve2corner_gt[:,1]] = 1
       gt_curve_corner_correspondence = gt_curve_corner_correspondence[:, cur_corner_indices[1]]
       assert(gt_curve_corner_correspondence.shape == curve_corner_similarity.shape)
 
       curve_endpoints_position = curve_predictions['pred_curve_points'][i][:,[0, -1]]#[100, 34, 3] -> [100, 2, 3]
-      # valid_curve_endpoints_position = curve_endpoints_position[curve_correspondence]
       valid_curve_endpoints_position = curve_endpoints_position[cur_curve_indices[0]]
 
-      #print(valid_curve_endpoints_position.shape)#[n_curves, 2, 3]
-      
-      # corner_position = corner_predictions['pred_corner_position'][i][corner_correspondence.to(device)] #!!!!!!
-      # print ("idx0 shape", cur_corner_indices[0].shape)
-      # print ("prediction shape: ", corner_predictions['pred_corner_position'][i].shape)
       corner_position = corner_predictions['pred_corner_position'][i][cur_corner_indices[0]] #to mapped space
-      # print ("corner position", corner_position.shape)
       if cur_corner_indices[0].shape[0] != 0:
-        # assert(len(corner_position.shape) == 2)
-        # if not flag_eval:
-        #   curve_corner_position = torch.cat([corner_position[curve2corner_gt[:,0]].unsqueeze(1), corner_position[curve2corner_gt[:,1]].unsqueeze(1)], axis=1)
-        #   curve_corner_position_rev = torch.cat([corner_position[curve2corner_gt[:,1]].unsqueeze(1), corner_position[curve2corner_gt[:,0]].unsqueeze(1)], axis=1)
-        # else:
-        #   #there exists cases that the ground truth endpoints of the ground truth curve have no correspondence with the prediction points
-        #   print ("idx shape", cur_corner_indices[1].shape)
-        #   gt2valid_corner = -1 * torch.ones(cur_corner_indices[1].max() + 1, dtype = torch.long)
-        #   gt2valid_corner[cur_corner_indices[1]] = torch.arange(cur_corner_indices[1].shape[0])
-        #   print ('zero min: ', gt2valid_corner[curve2corner_gt[:,0]].min())
-        #   print ('one min: ', gt2valid_corner[curve2corner_gt[:,1]].min())
-        #   print ('curve2corner_gt: ', curve2corner_gt)
-        #   print ('gt2valid ',gt2valid_corner)
-        #   assert(gt2valid_corner[curve2corner_gt[:,0]].min()>=0)
-        #   assert(gt2valid_corner[curve2corner_gt[:,1]].min()>=0)
-        #   curve_corner_position = torch.cat([corner_position[gt2valid_corner[curve2corner_gt[:,0]]].unsqueeze(1), corner_position[gt2valid_corner[curve2corner_gt[:,1]]].unsqueeze(1)], axis=1)
-        #   curve_corner_position_rev = torch.cat([corner_position[gt2valid_corner[curve2corner_gt[:,1]]].unsqueeze(1), corner_position[gt2valid_corner[curve2corner_gt[:,0]]].unsqueeze(1)], axis=1)
-          
-        # assert(len(curve_corner_position.shape) == 3 and curve_corner_position.shape[1] == 2)
-        # diff_forward = (valid_curve_endpoints_position[open_curve_idx] - curve_corner_position).square().sum(-1).mean(-1).view(-1, 1)
-        # diff_backward = (valid_curve_endpoints_position[open_curve_idx] - curve_corner_position_rev).square().sum(-1).mean(-1).view(-1, 1)
-        # topo_geometry_loss.append(torch.cat([diff_forward, diff_backward], dim=1).min(-1).values.mean())
-
-        # topo_geometry_loss.append(torch.zeros(1).to(corner_predictions['pred_logits'].device)[0])
         topo_geometry_loss.append(torch.zeros(1, device = corner_predictions['pred_logits'].device)[0])
-
         if not flag_round:
-          # topo_correspondence_loss.append(F.binary_cross_entropy(curve_corner_similarity.view(-1), gt_curve_corner_correspondence.to(corner_predictions['pred_logits'].device).view(-1)))
           topo_correspondence_loss.append(F.binary_cross_entropy(curve_corner_similarity.view(-1), gt_curve_corner_correspondence.view(-1)))
-
         else:
-          #rounding version of error
-          # print('gt cc shape:{}\n'.format(gt_curve_corner_correspondence.shape), gt_curve_corner_correspondence)
-          # print('pred cc\n', torch.round(curve_corner_similarity))
-
-          
-          # topo_correspondence_loss.append((torch.round(curve_corner_similarity)-gt_curve_corner_correspondence).abs().mean())
-          
-          #update 0107, divided by gt
           num_gt_curves = len(cur_curves_gt['is_closed'])
           num_gt_corners = len(corners_gt[i])
-          # print('num of curves: {} corners: {}'.format(num_gt_curves, num_gt_corners))
           topo_correspondence_loss.append(((torch.round(curve_corner_similarity)-gt_curve_corner_correspondence).abs().sum() + num_gt_curves * num_gt_corners - gt_curve_corner_correspondence.shape[0] * gt_curve_corner_correspondence.shape[1] ) / (num_gt_curves * num_gt_corners))
-          
-
-          # summary_loss_dict['topo_patch_curve'] = ((pred_patch2curve - gt_patch2curve).abs().sum().item() + num_gt_patches * num_gt_curves - pred_patch2curve.shape[0] * pred_patch2curve.shape[1] ) / (num_gt_patches * num_gt_curves)
-        
         if args.topo_acc:
           topo_correspondence_acc.append(100.0 * (1.0 - (torch.round(curve_corner_similarity)-gt_curve_corner_correspondence).abs().mean()) )
       
-      if(False):
-        #debug
-        print("=============================================================")
-        print("corner_matching_indices")
-        print(cur_corner_indices)
-        print("curve_matching_indices")
-        print(cur_curve_indices)
-        print("gt curve-corner correspondences")
-        print(cur_curves_gt['endpoints'])
-        print("gt closed curve label")
-        print(open_curve_idx)
-        print("gt matrix supervision")
-        print(gt_curve_corner_correspondence)
-        print(curve_corner_similarity.shape)
-        print(gt_curve_corner_correspondence.shape)
-        print(curve_corner_similarity)
-        print("=============================================================")
-      #print(curve_corner_similarity)
-      #print(gt_curve_corner_correspondence)
-    
 
     if not args.topo_acc:
       if(len(topo_geometry_loss) != 0):
@@ -1595,15 +1448,6 @@ def Patch_Curve_Matching_tripath(curve_predictions, patch_predictions, curves_gt
         continue
       if cur_patch_indices[0].shape[0] == 0:
         continue
-
-      # curve_correspondence = torch.zeros_like(cur_curve_indices[0])
-      # curve_correspondence[cur_curve_indices[1]] = cur_curve_indices[0]
-      
-      # patch_correspondence = torch.zeros_like(cur_patch_indices[0])
-      # patch_correspondence[cur_patch_indices[1]] = cur_patch_indices[0]
-      
-      # valid_patch_predictions_topo_embed = patch_predictions_topo_embed[patch_correspondence]
-      # valid_curve_predictions_topo_embed = curve_predictions_topo_embed[curve_correspondence]
       
       valid_patch_predictions_topo_embed = patch_predictions_topo_embed[cur_patch_indices[0]]
       valid_curve_predictions_topo_embed = curve_predictions_topo_embed[cur_curve_indices[0]]
@@ -1612,28 +1456,15 @@ def Patch_Curve_Matching_tripath(curve_predictions, patch_predictions, curves_gt
         patch_curve_similarity = torch.sigmoid(torch.einsum("ahf,bhf->abh", (valid_patch_predictions_topo_embed).view(-1, args.num_heads_dot, args.topo_embed_dim//args.num_heads_dot), valid_curve_predictions_topo_embed.view(-1, args.num_heads_dot, args.topo_embed_dim//args.num_heads_dot)).max(-1).values)
       else:
         patch_curve_similarity = torch.sigmoid(torch.mm(valid_patch_predictions_topo_embed, valid_curve_predictions_topo_embed.transpose(0,1))) #in shape [valid_open_curves, valid_corners]
-      #print(patch_curve_similarity)
-      #print(patch_curve_similarity.shape)        
-      # gt_patch_curve_correspondence = torch.from_numpy(patches_gt[i]['patch_curve_correspondence'].astype(np.float32))
-      # gt_patch_curve_correspondence = torch.from_numpy(patches_gt[i]['patch_curve_correspondence'].astype(np.float32)).to(curve_predictions['pred_curve_logits'].device)[cur_patch_indices[1],][:,cur_curve_indices[1]]
       gt_patch_curve_correspondence = patches_gt[i]['patch_curve_correspondence'][cur_patch_indices[1],][:,cur_curve_indices[1]]
 
-      #print(gt_patch_curve_correspondence.sum()) #should = 2*n_curves
       assert(gt_patch_curve_correspondence.shape == patch_curve_similarity.shape)
       if not flag_round:
         topo_correspondence_loss.append(F.binary_cross_entropy(patch_curve_similarity.view(-1), gt_patch_curve_correspondence.view(-1)))
       else:
-        # topo_correspondence_loss.append((torch.round(patch_curve_similarity)-gt_patch_curve_correspondence).abs().mean())
-        #modified 0107, divided by gt
         num_gt_curves = len(curves_gt[i]['labels'])
         num_gt_patches = len(patches_gt[i]['u_closed'])
-        # print('num of curves: {} patches: {}'.format(num_gt_curves, num_gt_patches))
-
         topo_correspondence_loss.append(((torch.round(patch_curve_similarity)-gt_patch_curve_correspondence).abs().sum() + num_gt_curves * num_gt_patches - gt_patch_curve_correspondence.shape[0] * gt_patch_curve_correspondence.shape[1] ) / (num_gt_curves * num_gt_patches) )
-
-
-        # topo_correspondence_loss.append(((torch.round(curve_corner_similarity)-gt_curve_corner_correspondence).abs().sum() + num_gt_curves * num_gt_corners - gt_curve_corner_correspondence.shape[0] * gt_curve_corner_correspondence.shape[1] ) / (num_gt_curves * num_gt_corners))
-        
       if args.topo_acc:
         topo_correspondence_acc.append(100.0 * (1.0 - (torch.round(patch_curve_similarity)-gt_patch_curve_correspondence).abs().mean()) )
       
@@ -1646,31 +1477,10 @@ def Patch_Curve_Matching_tripath(curve_predictions, patch_predictions, curves_gt
         gt_p2p[tmpid, tmpid] = 0
         pred_p2p[pred_p2p > 0.5] = 1
         gt_p2p[gt_p2p > 0.5] = 1
-        # p2p_loss.append((pred_p2p - gt_p2p).abs().mean().item())
-        
-        #modified 1223
         num_gt_patches = len(patches_gt[i]['u_closed'])
         num_match_patches = gt_p2p.shape[0]
-        # print('gt patch: {} match patch: {}'.format(num_gt_patches, num_match_patches))
         p2p_loss.append( ((pred_p2p - gt_p2p).abs().sum().item() + num_gt_patches * num_gt_patches - num_match_patches * num_match_patches) / (num_gt_patches * num_gt_patches) )
-      
-      if(False):
-        #debug
-        print("=============================================================")
-        print("corner_matching_indices")
-        print(cur_corner_indices)
-        print("curve_matching_indices")
-        print(cur_curve_indices)
-        print("gt curve-corner correspondences")
-        print("gt closed curve label")
-        print(open_curve_idx)
-        print("gt matrix supervision")
-        print(gt_curve_corner_correspondence)
-        print(curve_corner_similarity.shape)
-        print(gt_curve_corner_correspondence.shape)
-        print(curve_corner_similarity)
-        print("=============================================================")
-    
+ 
     if args.eval:
       #return patch to patch mat
       if(len(topo_correspondence_loss) != 0):
@@ -1705,43 +1515,19 @@ def Patch_Corner_Matching_tripath(corner_predictions, curve_predictions, patch_p
     for i in range(len(patches_gt)):
       #no curves exists thus we do not have to compute
       if(corners_gt[i].shape[0] == 0 or corner_indices[i][0].shape[0]==0):
-        #no ground truth or no prediction
-        #print("zero corners", i)
         zero_corners_examples += 1
         continue
       #compute pairwise dot product
       corner_predictions_topo_embed_patch = corner_predictions['corner_topo_embed_patch'][i] #in shape [100, 256]
       patch_predictions_topo_embed_corner = patch_predictions['patch_topo_embed_corner'][i] #in shape [100, 256]
-
       corner_predictions_topo_embed_curve = corner_predictions['corner_topo_embed_curve'][i] #in shape [100, 256]
       patch_predictions_topo_embed_curve = patch_predictions['patch_topo_embed_curve'][i] #in shape [100, 256]
-
       curve_predictions_topo_embed_corner = curve_predictions['curve_topo_embed_corner'][i] #in shape [100, 256]
       curve_predictions_topo_embed_patch = curve_predictions['curve_topo_embed_patch'][i] #in shape [100, 256]
-      
-
       #select matched curve and corners
       cur_corner_indices = corner_indices[i] #a tuple
       cur_curve_indices = curve_indices[i] #a tuple
       cur_patch_indices = patch_indices[i] #a tuple
-
-      # curve_correspondence = torch.zeros_like(cur_curve_indices[0])
-      # curve_correspondence[cur_curve_indices[1]] = cur_curve_indices[0]
-      
-      # patch_correspondence = torch.zeros_like(cur_patch_indices[0])
-      # patch_correspondence[cur_patch_indices[1]] = cur_patch_indices[0]
-
-      # corner_correspondence = torch.zeros_like(cur_corner_indices[0])
-      # corner_correspondence[cur_corner_indices[1]] = cur_corner_indices[0]
-      
-      # valid_patch_predictions_topo_embed_corner = patch_predictions_topo_embed_corner[patch_correspondence]
-      # valid_corner_predictions_topo_embed_patch = corner_predictions_topo_embed_patch[corner_correspondence]
-      
-      # valid_patch_predictions_topo_embed_curve = patch_predictions_topo_embed_curve[patch_correspondence]
-      # valid_corner_predictions_topo_embed_curve = corner_predictions_topo_embed_curve[corner_correspondence]
-
-      # valid_curve_predictions_topo_embed_corner = curve_predictions_topo_embed_corner[curve_correspondence]
-      # valid_curve_predictions_topo_embed_patch = curve_predictions_topo_embed_patch[curve_correspondence]
 
       valid_patch_predictions_topo_embed_corner = patch_predictions_topo_embed_corner[cur_patch_indices[0]]
       valid_corner_predictions_topo_embed_patch = corner_predictions_topo_embed_patch[cur_corner_indices[0]]
@@ -1753,91 +1539,42 @@ def Patch_Corner_Matching_tripath(corner_predictions, curve_predictions, patch_p
       valid_curve_predictions_topo_embed_patch = curve_predictions_topo_embed_patch[cur_curve_indices[0]]
 
       #curve
-      # open_curve_idx = torch.where(cur_curves_gt['is_closed'] < 0.5)
       cur_curves_gt = curves_gt[i] #a dict
       open_curve_idx = torch.where(cur_curves_gt['is_closed'][cur_curve_indices[1]] < 0.5)
       
       curve2corner_gt = cur_curves_gt['endpoints'][cur_curve_indices[1]][open_curve_idx]
-      # print(open_curve_idx)
-      # print('curve2corner', curve2corner_gt)
       assert(len(open_curve_idx) == 1)
-      # gt_curve_corner_correspondence = torch.zeros([open_curve_idx[0].shape[0], corner_correspondence.shape[0]]) #target supervision
-      # gt_curve_corner_correspondence[torch.arange(curve2corner_gt.shape[0]), curve2corner_gt[:,0]] = 1
-      # gt_curve_corner_correspondence[torch.arange(curve2corner_gt.shape[0]), curve2corner_gt[:,1]] = 1
-
-      # max_corner = torch.zeros(1)
-      # if not curve2corner_gt.shape[0] == 0:
-      #   max_corner = torch.max(max_corner, curve2corner_gt.max())
-      # if not cur_corner_indices[1].shape[0] == 0:
-      #   max_corner = torch.max(max_corner, cur_corner_indices[1].max())
-      # # max_corner = torch.max(curve2corner_gt.max(), cur_corner_indices[1].max())
-      # gt_curve_corner_correspondence = torch.zeros([open_curve_idx[0].shape[0], max_corner.type(torch.LongTensor).item() + 1])
-
       max_corner = 0
       if not curve2corner_gt.shape[0] == 0:
-        # max_corner = torch.max(max_corner, curve2corner_gt.type(torch.LongTensor).max())
         max_corner = max(max_corner, curve2corner_gt.type(torch.LongTensor).max().item())
       if not cur_corner_indices[1].shape[0] == 0:
-        # max_corner = torch.max(max_corner, cur_corner_indices[1].type(torch.LongTensor).max())
         max_corner = max(max_corner, cur_corner_indices[1].max().item())
-      # max_corner = torch.max(curve2corner_gt.max(), cur_corner_indices[1].max())
-      # gt_curve_corner_correspondence = torch.zeros([open_curve_idx[0].shape[0], max_corner.item() + 1])
       gt_curve_corner_correspondence = torch.zeros([open_curve_idx[0].shape[0], int(max_corner) + 1], device = corner_predictions['pred_logits'].device)
-      # gt_curve_corner_correspondence = torch.zeros([open_curve_idx[0].shape[0], curve2corner_gt.max() + 1])
       gt_curve_corner_correspondence[torch.arange(curve2corner_gt.shape[0]), curve2corner_gt[:,0]] = 1
       gt_curve_corner_correspondence[torch.arange(curve2corner_gt.shape[0]), curve2corner_gt[:,1]] = 1
       gt_curve_corner_correspondence = gt_curve_corner_correspondence[:, cur_corner_indices[1]]
-      # if(args.num_heads_dot > 1):
-      #   patch_curve_similarity = torch.sigmoid(torch.einsum("ahf,bhf->abh", (valid_patch_predictions_topo_embed).view(-1, args.num_heads_dot, args.topo_embed_dim//args.num_heads_dot), valid_curve_predictions_topo_embed.view(-1, args.num_heads_dot, args.topo_embed_dim//args.num_heads_dot)).max(-1).values)
-      # else:
       patch_corner_similarity = torch.sigmoid(torch.mm(valid_patch_predictions_topo_embed_corner, valid_corner_predictions_topo_embed_patch.transpose(0,1))) 
       curve_corner_similarity = torch.sigmoid(torch.mm(valid_curve_predictions_topo_embed_corner, valid_corner_predictions_topo_embed_curve.transpose(0,1)))
-
       patch_curve_similarity = torch.sigmoid(torch.mm(valid_patch_predictions_topo_embed_curve, valid_curve_predictions_topo_embed_patch.transpose(0,1)))
-
-      #in shape [valid_open_curves, valid_corners]
-      #print(patch_curve_similarity)
-      #print(patch_curve_similarity.shape)        
-      # gt_patch_curve_correspondence = torch.from_numpy(patches_gt[i]['patch_curve_correspondence'].astype(np.float32))
-      # gt_patch_curve_correspondence = torch.from_numpy(patches_gt[i]['patch_curve_correspondence'].astype(np.float32)).to(corner_predictions['pred_logits'].device)[cur_patch_indices[1],][:,cur_curve_indices[1]]
       gt_patch_curve_correspondence = patches_gt[i]['patch_curve_correspondence'][cur_patch_indices[1],][:,cur_curve_indices[1]]
-
-
       gt_patch_corner_correspondence = torch.mm(gt_patch_curve_correspondence[:,open_curve_idx[0]], gt_curve_corner_correspondence)
-      # tmp_mean = gt_patch_corner_correspondence[gt_patch_corner_correspondence > 1.0].mean()
       gt_patch_corner_correspondence[gt_patch_corner_correspondence > 1.0] = 1.0
-
-      #print(gt_patch_curve_correspondence.sum()) #should = 2*n_curves
       assert(gt_patch_corner_correspondence.shape == patch_corner_similarity.shape)
       if not flag_round:
-        # topo_correspondence_loss.append(F.binary_cross_entropy(patch_corner_similarity.view(-1), gt_patch_corner_correspondence.to(corner_predictions['pred_logits'].device).view(-1))) #binary cross entropy does not apply softmax
         topo_correspondence_loss.append(F.binary_cross_entropy(patch_corner_similarity.view(-1), gt_patch_corner_correspondence.view(-1))) #binary cross entropy does not apply softmax
-
       else:
-        # topo_correspondence_loss.append((torch.round(patch_corner_similarity)-gt_patch_corner_correspondence).abs().mean())
-
-        #modified 0107, divided by gt
-        
         num_gt_curves = len(curves_gt[i]['is_closed'])
         num_gt_corners = len(corners_gt[i])
         num_gt_patches = len(patches_gt[i]['u_closed'])
-
-        # print('len of corners: {} curves: {} patches: {}'.format(num_gt_corners, num_gt_curves, num_gt_patches))
         topo_correspondence_loss.append(((torch.round(patch_corner_similarity)-gt_patch_corner_correspondence).abs().sum() + num_gt_corners * num_gt_patches - gt_patch_corner_correspondence.shape[0] * gt_patch_corner_correspondence.shape[1] ) / (num_gt_corners * num_gt_patches))
-
-        # topo_correspondence_loss.append(((torch.round(patch_curve_similarity)-gt_patch_curve_correspondence).abs().sum() + num_gt_curves * num_gt_patches - gt_patch_curve_correspondence.shape[0] * gt_patch_curve_correspondence.shape[1] ) / (num_gt_curves * num_gt_patches) )
-      
       if args.topo_acc:
         topo_correspondence_acc.append(100.0 * (1.0 - (torch.round(patch_corner_similarity)-gt_patch_corner_correspondence).abs().mean()) )
-        
-
       curve_point_loss.append((torch.sum(curve_corner_similarity[open_curve_idx[0]], dim=1) - 2).norm().mean()/math.sqrt(curve_corner_similarity.shape[1]))
       curve_patch_loss.append((torch.sum(patch_curve_similarity, dim=0) - 2).norm().mean()/math.sqrt(patch_curve_similarity.shape[0]))
 
       pc_cc_m = torch.mm(patch_curve_similarity[:, open_curve_idx[0]], curve_corner_similarity[open_curve_idx[0]])
       assert(pc_cc_m.shape == patch_corner_similarity.shape)
       patch_close_loss.append((pc_cc_m - 2 * patch_corner_similarity).norm() / math.sqrt(patch_corner_similarity.shape[0] * patch_corner_similarity.shape[1]))
-    
     if not args.topo_acc:
       if(len(topo_correspondence_loss) != 0):
         return [sum(topo_correspondence_loss) / len(topo_correspondence_loss), sum(curve_point_loss) / len(curve_point_loss), sum(curve_patch_loss) / len(curve_patch_loss), sum(patch_close_loss) / len(patch_close_loss)]
@@ -1892,7 +1629,6 @@ class SetCriterion_Corner(nn.Module):
         losses = {'loss_ce': loss_ce}
 
         if log:
-            # TODO this should probably be a separate loss, not hacked in this one here
             losses['corner_prediction_accuracy'] = accuracy(src_logits[idx], target_classes_o)[0]
             losses['corner_prediction_accuracy_overall'] = accuracy(src_logits.view(-1,2) , target_classes.view(-1))[0]
             
@@ -1943,26 +1679,17 @@ class SetCriterion_Corner(nn.Module):
         src_corner_points = outputs['pred_corner_position'][idx]
         target_corner_points = torch.cat([t[i] for t, (_, i) in zip(targets, indices)], dim=0)
 
-        #loss_geometry = F.mse_loss(src_corner_points, target_corner_points, reduction='none')
         loss_geometry = (src_corner_points - target_corner_points).square().sum(-1).sqrt()
 
         close_indices = torch.where(loss_geometry < args.dist_th)
-        #valid elements
+        #compute for valid elements
         losses = {}
         losses['cd'] = loss_geometry.sum() / max(1, loss_geometry.shape[0])     
-
         pred_logits = outputs['pred_logits'][0]
         device = pred_logits.device
-        # tgt_lengths = torch.as_tensor([v.shape[0] for v in targets], device=device)
-        # # Count the number of predictions that are NOT "no-object" (which is the last class)
-        # card_pred = (pred_logits.argmax(-1) != pred_logits.shape[-1] - 1).sum(1)
-        # card_err = F.l1_loss(card_pred.float(), tgt_lengths.float())
-        # losses = {'cardinality_error': card_err}
         pred_labels = pred_logits.softmax(-1)
         pred_valid_id = torch.where(pred_labels[:, 0]>args.val_th) #thresholding previously, this sentense might not be useful
         if num_corners == 1: #zero corners
-          # losses['precision'] = torch.tensor(1.0, device=device)
-          # losses['precision'] = torch.tensor(close_indices[0].shape[0] / max(1, pred_valid_id[0].shape[0]), device=device)
           if (pred_valid_id[0].shape[0] == 0):
             losses['precision'] = torch.tensor(1.0, device=device)
           else:
@@ -1973,8 +1700,6 @@ class SetCriterion_Corner(nn.Module):
           losses['recall'] = torch.tensor(close_indices[0].shape[0] / num_corners, device = device)
         losses['fscore'] = 2 * losses['precision'] * losses['recall'] / (losses['precision'] + losses['recall'] + 1e-6)
         return losses
-    # def get_precision(self, outputs, targets, indices, num_corners):
-
     def _get_src_permutation_idx(self, indices):
         # permute predictions following indices
         batch_idx = torch.cat([torch.full_like(src, i) for i, (src, _) in enumerate(indices)])
@@ -2015,7 +1740,6 @@ class SetCriterion_Corner(nn.Module):
 
         # Compute the average number of target boxes accross all nodes, for normalization purposes
         num_corners = sum(t.shape[0] for t in targets) 
-        # num_corners = sum(id[0].shape[0] for id in indices)
         num_corners = torch.as_tensor([num_corners], dtype=torch.float, device=next(iter(outputs.values())).device)
         if is_dist_avail_and_initialized():
             torch.distributed.all_reduce(num_corners)
@@ -2033,9 +1757,6 @@ class SetCriterion_Corner(nn.Module):
                 indices = self.matcher(aux_outputs, targets)
                 corner_matching_indices['aux_outputs'].append({'indices':indices})
                 for loss in self.losses:
-                    #if loss == 'masks':
-                    #    # Intermediate masks losses are too costly to compute, we ignore them.
-                    #    continue
                     kwargs = {}
                     if loss == 'labels':
                         # Logging is enabled only for the last layer
@@ -2108,10 +1829,8 @@ class SetCriterion_Curve(nn.Module):
         losses = {'loss_valid_ce': loss_ce}
 
         if log:
-            # TODO this should probably be a separate loss, not hacked in this one here
             losses['valid_class_accuracy'] = accuracy(src_logits[idx], target_classes_o)[0]
             losses['valid_class_accuracy_overall'] = accuracy(src_logits.view(-1,2), target_classes.view(-1))[0]
-            # print('overall valid accuracy: ', losses['valid_class_accuracy_overall'])
 
         return losses
     
@@ -2123,16 +1842,12 @@ class SetCriterion_Curve(nn.Module):
         src_logits = outputs['pred_curve_type']
 
         idx = self._get_src_permutation_idx(indices)
-        # target_classes = torch.cat([t["labels"][J] for t, (_, J) in zip(targets, indices)]).to(src_logits.device)
         target_classes = torch.cat([t["labels"][J] for t, (_, J) in zip(targets, indices)])
-        #target_classes_o = torch.cat([torch.zeros(J.shape, device=src_logits.device) for t, (_, J) in zip(targets, indices)])
-        
         assert(len(src_logits[idx].shape) == 2 and src_logits[idx].shape[1] == 4)
         loss_ce = F.cross_entropy(src_logits[idx], target_classes)
         losses = {'loss_curve_type_ce': loss_ce}
 
         if log:
-            # TODO this should probably be a separate loss, not hacked in this one here
             losses['type_class_accuracy'] = accuracy(src_logits[idx], target_classes)[0]
         return losses
 
@@ -2144,7 +1859,6 @@ class SetCriterion_Curve(nn.Module):
         pred_logits = outputs['pred_curve_logits']
         device = pred_logits.device
         tgt_lengths = torch.as_tensor([len(v["labels"]) for v in targets], device=device)
-        # Count the number of predictions that are NOT "no-object" (which is the last class)
         card_pred = (pred_logits.argmax(-1) != pred_logits.shape[-1] - 1).sum(1)
         card_err = F.l1_loss(card_pred.float(), tgt_lengths.float())
         losses = {'cardinality_error': card_err}
@@ -2159,18 +1873,11 @@ class SetCriterion_Curve(nn.Module):
         idx = self._get_src_permutation_idx(indices) #only src
         src_curve_points = outputs['pred_curve_points'][idx]
         if args.flag_cycleid:
-          # src_curve_cycleid = cycleid
           src_curve_cycleid = torch.cat(cycleid)
-        # target_curve_points = torch.cat([t['curve_points'][i] for t, (_, i) in zip(targets, indices)], dim=0).to(src_curve_points.device)
         target_curve_points = torch.cat([t['curve_points'][i] for t, (_, i) in zip(targets, indices)], dim=0)
-
-        # target_curve_length_weight = torch.cat([t['curve_length_weighting'][i] for t, (_, i) in zip(targets, indices)], dim=0).to(src_curve_points.device)
         target_curve_length_weight = torch.cat([t['curve_length_weighting'][i] for t, (_, i) in zip(targets, indices)], dim=0)
-
         assert(target_curve_length_weight.shape[0] == target_curve_points.shape[0])
         is_target_curve_closed = torch.cat([t['is_closed'][i] for t, (_, i) in zip(targets, indices)])
-        
-        #print(src_curve_points.shape, target_curve_points.shape)
         assert(src_curve_points.shape == target_curve_points.shape)
         
         if(False):
@@ -2184,12 +1891,9 @@ class SetCriterion_Curve(nn.Module):
           #open curve
           if not args.flag_cycleid:
             if not args.geom_l2:
-              #only_open works here
               distance_forward = (src_curve_points - target_curve_points).square().sum(-1).mean(-1).view(-1,1)
               distance_backward = (torch.flip(src_curve_points, dims=(1,)) - target_curve_points).square().sum(-1).mean(-1).view(-1,1)
               loss_geometry = torch.cat((distance_forward, distance_backward), dim=-1).min(-1).values
-              #print(loss_geometry.shape)
-              #print("src_curve_points.shape = ", src_curve_points.shape)
               if not args.curve_open_loss:
                 for i in range(is_target_curve_closed.shape[0]):
                   if(is_target_curve_closed[i]):
@@ -2199,14 +1903,11 @@ class SetCriterion_Curve(nn.Module):
               distance_forward = (src_curve_points - target_curve_points).norm(dim = -1).mean(-1).view(-1,1)
               distance_backward = (torch.flip(src_curve_points, dims=(1,)) - target_curve_points).norm(dim = -1).mean(-1).view(-1,1)
               loss_geometry = torch.cat((distance_forward, distance_backward), dim=-1).min(-1).values
-              #print(loss_geometry.shape)
-              #print("src_curve_points.shape = ", src_curve_points.shape)
               for i in range(is_target_curve_closed.shape[0]):
                 if(is_target_curve_closed[i]):
                   tgt_possible_curves = cyclic_curve_points(target_curve_points[i].unsqueeze(0)) #[66, 34, 3]
                   loss_geometry[i] = (tgt_possible_curves - src_curve_points[i:i+1]).norm(dim = -1).mean(-1).min()
           else:
-
             src_curve_tmp = src_curve_points
             closeid = torch.where(is_target_curve_closed == True)[0]
             for i in range(closeid.shape[0]):
@@ -2242,14 +1943,10 @@ class SetCriterion_Curve(nn.Module):
           target_curve_length_weight = torch.cat([t['curve_length_weighting'][i] for t, (_, i) in zip(targets, indices)], dim=0).to(src_curve_points.device)
           assert(target_curve_length_weight.shape[0] == target_curve_points.shape[0])
           is_target_curve_closed = torch.cat([t['is_closed'][i] for t, (_, i) in zip(targets, indices)])
-          
-          #print(src_curve_points.shape, target_curve_points.shape)
           assert(src_curve_points.shape == target_curve_points.shape)
-          
           if(True):
             #compute chamfer distance
             pairwise_distance = torch.cdist(src_curve_points, target_curve_points, p=2.0) #in shape [batch_size, src_curve_number, tgt_curve_number)
-            #print("pairwise_distance shape=", pairwise_distance.shape)
             s2t = pairwise_distance.min(-1).values.mean(-1)
             t2s = pairwise_distance.min(-2).values.mean(-1)        
             loss_geometry = (s2t + t2s) / 2.0
@@ -2265,19 +1962,10 @@ class SetCriterion_Curve(nn.Module):
                 tgt_possible_curves = cyclic_curve_points(target_curve_points[i].unsqueeze(0)) #[66, 34, 3]
                 loss_geometry[i] = (tgt_possible_curves - src_curve_points[i:i+1]).square().sum(-1).mean(-1).min()
           assert(loss_geometry.shape == target_curve_length_weight.shape)
-          # loss_geometry *= target_curve_length_weight
           losses = {}
           losses['cd'] = loss_geometry.sum() / max(1, loss_geometry.shape[0])   
-
           #corner
-          # losses['cd'] = loss_geometry.sum() / max(1, loss_geometry.shape[0])     
           close_indices = torch.where(loss_geometry < args.dist_th)
-          
-          # tgt_lengths = torch.as_tensor([v.shape[0] for v in targets], device=device)
-          # # Count the number of predictions that are NOT "no-object" (which is the last class)
-          # card_pred = (pred_logits.argmax(-1) != pred_logits.shape[-1] - 1).sum(1)
-          # card_err = F.l1_loss(card_pred.float(), tgt_lengths.float())
-          # losses = {'cardinality_error': card_err}
           pred_labels = pred_logits.softmax(-1)
           pred_valid_id = torch.where(pred_labels[:, 0]>args.val_th)
           losses['precision'] = torch.tensor(close_indices[0].shape[0] / max(1, pred_valid_id[0].shape[0]), device=device)
@@ -2285,10 +1973,8 @@ class SetCriterion_Curve(nn.Module):
           
           #for classification
           src_logits = outputs['pred_curve_type']
-
           idx = self._get_src_permutation_idx(indices)
           target_classes = torch.cat([t["labels"][J] for t, (_, J) in zip(targets, indices)]).to(src_logits.device)
-          #target_classes_o = torch.cat([torch.zeros(J.shape, device=src_logits.device) for t, (_, J) in zip(targets, indices)])
           losses['class_accuracy'] = accuracy(src_logits[idx], target_classes)[0]
         else:
           losses = {}
@@ -2296,9 +1982,7 @@ class SetCriterion_Curve(nn.Module):
           losses['precision'] = torch.tensor(0.0, device = device)
           losses['recall'] = torch.tensor(0.0, device = device)
           losses['class_accuracy'] = torch.tensor(0.0, device = device)
-        
         losses['fscore'] = 2 * losses['precision'] * losses['recall'] / (losses['precision'] + losses['recall'] + 1e-6)
-
         return losses
 
     
@@ -2410,19 +2094,14 @@ class SetCriterion_Patch(nn.Module):
         if args.patch_emd:
           self.emd_idlist = []
           base = torch.arange(points_per_patch_dim * points_per_patch_dim).view(points_per_patch_dim, points_per_patch_dim)
-          # self.emd_idlist.append(base.flatten())
           for i in range(4):
             self.emd_idlist.append(torch.rot90(base, i, [0,1]).flatten())
           
           base_t = base.transpose(0,1)
-          # self.emd_idlist.append(base_t.flatten())
           for i in range(4):
             self.emd_idlist.append(torch.rot90(base_t, i, [0,1]).flatten())
 
           self.emd_idlist = torch.cat(self.emd_idlist)
-
-          #save emd list
-          # np.savetxt('emdlist.txt', self.emd_idlist.view(-1,10).detach().numpy(),fmt = "%d")
         if args.patch_uv:
           self.emd_idlist_u = []
           self.emd_idlist_v = []
@@ -2438,20 +2117,6 @@ class SetCriterion_Patch(nn.Module):
               self.emd_idlist_u.append(torch.rot90(cur_base, i, [0,1]).flatten())
           
           self.emd_idlist_u = torch.cat(self.emd_idlist_u)
-          #set idlist v
-          # for i in range(points_per_patch_dim):
-          #   cur_base = base.roll(shifts=i, dims = 1)
-          #   for i in range(4):
-          #     self.emd_idlist_v.append(torch.rot90(cur_base, i, [0,1]).flatten())
-            
-          #   cur_base = cur_base.transpose(0,1)
-          #   for i in range(4):
-          #     self.emd_idlist_v.append(torch.rot90(cur_base, i, [0,1]).flatten())
-          
-          # self.emd_idlist_v = torch.cat(self.emd_idlist_v)
-
-          # np.savetxt('emdlist_u.txt', self.emd_idlist_u.view(-1,10).detach().numpy(),fmt = "%d")
-          # np.savetxt('emdlist_v.txt', self.emd_idlist_v.view(-1,10).detach().numpy(),fmt = "%d")
 
         if args.eval_param:
           cp_distance = ComputePrimitiveDistance(reduce = True)
@@ -2491,7 +2156,6 @@ class SetCriterion_Patch(nn.Module):
         src_logits = outputs['pred_patch_logits']
 
         idx = self._get_src_permutation_idx(indices)
-        #target_classes_o = torch.cat([t["labels"][J] for t, (_, J) in zip(targets, indices)])
         target_classes_o = torch.cat([torch.zeros(J.shape, device=src_logits.device) for t, (_, J) in zip(targets, indices)])
         target_classes = torch.full(src_logits.shape[:2], 1,
                                     dtype=torch.int64, device=src_logits.device)
@@ -2501,7 +2165,6 @@ class SetCriterion_Patch(nn.Module):
         losses = {'loss_valid_ce': loss_ce}
 
         if log:
-            # TODO this should probably be a separate loss, not hacked in this one here
             losses['valid_class_accuracy'] = accuracy(src_logits[idx], target_classes_o)[0]
             losses['valid_class_accuracy_overall'] = accuracy(src_logits.view(-1,2), target_classes.view(-1))[0]
         return losses
@@ -2514,16 +2177,12 @@ class SetCriterion_Patch(nn.Module):
         src_logits = outputs['pred_patch_type']
 
         idx = self._get_src_permutation_idx(indices)
-        # target_classes = torch.cat([t["labels"][J] for t, (_, J) in zip(targets, indices)]).to(src_logits.device)
         target_classes = torch.cat([t["labels"][J] for t, (_, J) in zip(targets, indices)])
-        #target_classes_o = torch.cat([torch.zeros(J.shape, device=src_logits.device) for t, (_, J) in zip(targets, indices)])
-        
         assert(len(src_logits[idx].shape) == 2 and src_logits[idx].shape[1] == 6)
         loss_ce = F.cross_entropy(src_logits[idx], target_classes)
         losses = {'loss_patch_type_ce': loss_ce}
 
         if log:
-            # TODO this should probably be a separate loss, not hacked in this one here
             losses['type_class_accuracy'] = accuracy(src_logits[idx], target_classes)[0]
         return losses
 
@@ -2551,9 +2210,7 @@ class SetCriterion_Patch(nn.Module):
         src_patch_points = outputs['pred_patch_points'][idx]
         if args.output_normal:
           src_patch_normals = outputs['pred_patch_normals'][idx]
-        # print(len(targets))
         target_patch_points_list = [[t['patch_points'][j] for j in i.numpy().tolist()] for t, (_, i) in zip(targets, indices)]#torch.cat(, dim=0)
-        # target_patch_area_weighting = torch.cat([t['patch_area_weighting'][i] for t, (_, i) in zip(targets, indices)], dim=0).to(src_patch_points.device)
         target_patch_area_weighting = torch.cat([t['patch_area_weighting'][i] for t, (_, i) in zip(targets, indices)], dim=0)
 
         if args.patch_uv:
@@ -2572,18 +2229,11 @@ class SetCriterion_Patch(nn.Module):
             target_patch_normals += target_patch_normals_list[i]
         
         if args.patch_emd:
-          #patch_normal and patch_lap not necessary here
           target_patch_points_batch = torch.cat(target_patch_points).view(len(target_patch_points), -1, 3)
-          # loss_geometry_batch = (target_patch_points_batch - src_patch_points).sum(-1).mean()
-          
           loss_geom = emd_by_id(target_patch_points_batch, src_patch_points, self.emd_idlist, points_per_patch_dim)
           
           if args.patch_uv:
             uclose_id = torch.where(target_patch_uclosed == 1)[0]
-            # vclose_id = torch.where(target_patch_vclosed == 1)[0]
-            #first v then u
-            # if len(vclose_id) > 0:
-            #   loss_geom[vclose_id] = emd_by_id(target_patch_points_batch[vclose_id], src_patch_points[vclose_id], self.emd_idlist_v, points_per_patch_dim)
             if len(uclose_id) > 0:
               loss_geom[uclose_id] = emd_by_id(target_patch_points_batch[uclose_id], src_patch_points[uclose_id], self.emd_idlist_u, points_per_patch_dim)
               
@@ -2593,25 +2243,6 @@ class SetCriterion_Patch(nn.Module):
           return losses
 
         if args.batch_cd:
-          #batch_computation
-          #grid version begin
-          # target_patch_points_batch = torch.cat(target_patch_points).view(len(target_patch_points), -1, 3)
-
-          # #batch cd
-          # target_nn = knn_points(target_patch_points_batch, src_patch_points)
-          # target_cd = target_nn.dists[...,0] #N x 100
-          # target_id = target_nn.idx #N x 100 x 1
-
-          # if args.single_dir_patch_chamfer:
-          #   loss_geometry_batch = ((target_cd.mean(-1)) * target_patch_area_weighting).mean()
-          # else:
-          #   src_nn = knn_points(src_patch_points, target_patch_points_batch)
-          #   src_cd = src_nn.dists[...,0] 
-          #   src_id = src_nn.idx[...,0] 
-          #   # loss_geometry_batch = (target_cd.mean() * 1.0 + src_cd.mean() * 0.2) / 1.2
-          #   loss_geometry_batch = ((target_cd.mean(-1)  + src_cd.mean(-1) * 0.2) * target_patch_area_weighting).mean() / 1.2
-          #grid version end
-          
           target_point_clouds_length = torch.tensor([len(p) for p in target_patch_points], device=src_patch_points.device)
           flag_equasize = False
           if len(target_point_clouds_length.unique()) == 1:
@@ -2627,25 +2258,11 @@ class SetCriterion_Patch(nn.Module):
           else:
             src_nn = knn_points(src_patch_points, target_patch_points_batch, lengths2=target_point_clouds_length)
             src_cd = src_nn.dists[...,0] 
-            # src_id = src_nn.idx[...,0] 
-            # loss_geometry_batch = (target_cd.mean() * 1.0 + src_cd.mean() * 0.2) / 1.2
             loss_geometry_batch = ((target_cd.sum(-1) / target_point_clouds_length  + src_cd.mean(-1) * 0.2) * target_patch_area_weighting).mean() / 1.2
 
-          #emd:
-          # loss_geometry_batch = (target_patch_points_batch - src_patch_points).sum(-1).mean()
-          
           #laplacian loss
           loss_patch_lap = []
           if args.patch_lap:
-            # for patch_idx in range(len(target_patch_points)):
-            #   x_minus = src_patch_points[patch_idx][outputs['mask_x_minus']]
-            #   x_plus = src_patch_points[patch_idx][outputs['mask_x_plus']]
-            #   y_minus = src_patch_points[patch_idx][outputs['mask_y_minus']]
-            #   y_plus = src_patch_points[patch_idx][outputs['mask_y_plus']]
-            #   loss_patch_lap.append((src_patch_points[patch_idx] - (x_minus + x_plus + y_minus + y_plus) / 4.0).norm(dim = -1).mean())
-          
-            # loss_patch_lap_batch = sum(loss_patch_lap) / num_patches
-
             #batch version
             x_minus = src_patch_points[:,outputs['mask_x_minus'],:]
             x_plus = src_patch_points[:,outputs['mask_x_plus'],:]
@@ -2654,42 +2271,26 @@ class SetCriterion_Patch(nn.Module):
             loss_patch_lap_batch = (src_patch_points - (x_minus + x_plus + y_minus + y_plus) / 4.0).norm(dim = -1).mean()
           
           if args.patch_normal:
-            #single dir version
-            # target_patch_normals_batch = torch.cat(target_patch_normals).view(len(target_patch_normals), -1, 3)
-
             target_patch_normals_batch = list_to_padded(target_patch_normals, (target_point_clouds_length.max(), 3), equisized = flag_equasize)
-
             if args.single_dir_patch_chamfer:
-              #batch for df lengths ? remaining part should be zero
-              # src_nn_pts = knn_gather(src_patch_points, target_id)
-              # src_nn_pts = src_nn_pts.unsqueeze(-2)
               tangent_x = src_patch_points[:, outputs['mask_x'], ...] - src_patch_points
               tangent_y = src_patch_points[:, outputs['mask_y'], ...] - src_patch_points
-              
               tangent_x_nn = knn_gather(tangent_x, target_id, target_point_clouds_length).squeeze(-2)
               tangent_y_nn = knn_gather(tangent_y, target_id, target_point_clouds_length).squeeze(-2)
               tangent_x_nn = F.normalize(tangent_x_nn, dim = -1)
               tangent_y_nn = F.normalize(tangent_y_nn, dim = -1)
-              # loss_patch_normal_batch = (tangent_x_nn * target_patch_normals_batch).sum(-1).abs().mean() + (tangent_y_nn * target_patch_normals_batch).sum(-1).abs().mean()
 
               loss_patch_normal_batch = ((tangent_x_nn * target_patch_normals_batch).sum(-1).abs().sum(-1) / target_point_clouds_length + (tangent_y_nn * target_patch_normals_batch).sum(-1).abs().sum(-1) / target_point_clouds_length).mean()
 
 
           losses = {}
           losses['loss_geometry'] = loss_geometry_batch
-          # if args.patch_normal:
-          #   losses['loss_patch_normal'] = sum(loss_patch_normal) / num_patches   
           if args.patch_lap: #no patch_lapboundary
             losses['loss_patch_lap'] = loss_patch_lap_batch
-          # if args.output_normal:
-          #   losses['output_normal_diff'] = sum(loss_output_normal_diff) / num_patches
-          #   losses['output_normal_tangent'] = sum(loss_output_normal_tangent) / num_patches
-
           if args.patch_normal:
             losses['loss_patch_normal'] = loss_patch_normal_batch
           return losses
 
-        #print(len(src_patch_points), len(target_patch_points))
         assert(len(src_patch_points) == len(target_patch_points))
         assert(target_patch_area_weighting.shape[0] == len(target_patch_points))
         #compute chamfer distance
@@ -2708,79 +2309,23 @@ class SetCriterion_Patch(nn.Module):
             loss_geometry.append(target_patch_area_weighting[patch_idx]*patch_distance.min(0).values.mean())
           else:
             loss_geometry.append(target_patch_area_weighting[patch_idx]*(patch_distance.min(0).values.mean() + 0.2*patch_distance.min(-1).values.mean()) / 1.2)
-            # loss_geometry.append((patch_distance.min(0).values.mean() + 0.2*patch_distance.min(-1).values.mean()) / 1.2)
           if args.patch_normal:
             if args.single_dir_patch_chamfer:
               closest_id = torch.argmin(patch_distance, dim = 0)
-              # loss_patch_normal.append((src_patch_points[patch_idx] - target_patch_points[patch_idx][closest_id]).norm())
-
-              # #for debugging
-              # np.savetxt('init.xyz', src_patch_points[patch_idx].detach().cpu().numpy())
-              # parameterization_coord = torch.arange(points_per_patch_dim*points_per_patch_dim, dtype=torch.int32, device=src_patch_points.device)
-              # parameterization_coord = torch.cat([(parameterization_coord // points_per_patch_dim).view(-1,1), (parameterization_coord % points_per_patch_dim).view(-1,1)], dim=1).float().view(points_per_patch_dim*points_per_patch_dim, 2)
-              # np.savetxt('xo.txt', parameterization_coord[:,0].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('yo.txt', parameterization_coord[:,1].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              
-              # tx = parameterization_coord[outputs['mask_x']] - parameterization_coord
-              # ty = parameterization_coord[outputs['mask_y']] - parameterization_coord
-
-              # np.savetxt('txx.txt', tx[:,0].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('txy.txt', tx[:,1].view(10,10).det ach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('tyx.txt', ty[:,0].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('tyy.txt', ty[:,1].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('x.txt', parameterization_coord[:,0].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('y.txt', parameterization_coord[:,1].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('mx.txt', outputs['mask_x'].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('my.txt', outputs['mask_y'].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # #id for mask is fine
-              # #debugging end
-              
-
               tangent_x = src_patch_points[patch_idx][outputs['mask_x']] - src_patch_points[patch_idx]
               tangent_y = src_patch_points[patch_idx][outputs['mask_y']] - src_patch_points[patch_idx]
-              #normalize
-              # tangent_x = tangent_x / tangent_x.norm(dim = -1).unsqueeze(dim=-1) 
-              # tangent_y = tangent_y / tangent_y.norm(dim = -1).unsqueeze(dim=-1) 
               tangent_x = F.normalize(tangent_x, dim = -1)
               tangent_y = F.normalize(tangent_y, dim = -1)
               loss_patch_normal.append((tangent_x[closest_id] * target_patch_normals[patch_idx]).sum(-1).abs().mean())
               loss_patch_normal.append((tangent_y[closest_id] * target_patch_normals[patch_idx]).sum(-1).abs().mean())
             else:
               closest_id = torch.argmin(patch_distance, dim = 1)
-              # loss_patch_normal.append((src_patch_points[patch_idx] - target_patch_points[patch_idx][closest_id]).norm())
-
-              # #for debugging
-              # np.savetxt('init.xyz', src_patch_points[patch_idx].detach().cpu().numpy())
-              # parameterization_coord = torch.arange(points_per_patch_dim*points_per_patch_dim, dtype=torch.int32, device=src_patch_points.device)
-              # parameterization_coord = torch.cat([(parameterization_coord // points_per_patch_dim).view(-1,1), (parameterization_coord % points_per_patch_dim).view(-1,1)], dim=1).float().view(points_per_patch_dim*points_per_patch_dim, 2)
-              # np.savetxt('xo.txt', parameterization_coord[:,0].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('yo.txt', parameterization_coord[:,1].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              
-              # tx = parameterization_coord[outputs['mask_x']] - parameterization_coord
-              # ty = parameterization_coord[outputs['mask_y']] - parameterization_coord
-
-              # np.savetxt('txx.txt', tx[:,0].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('txy.txt', tx[:,1].view(10,10).det ach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('tyx.txt', ty[:,0].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('tyy.txt', ty[:,1].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('x.txt', parameterization_coord[:,0].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('y.txt', parameterization_coord[:,1].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('mx.txt', outputs['mask_x'].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # np.savetxt('my.txt', outputs['mask_y'].view(10,10).detach().cpu().numpy(), fmt = "%d")
-              # #id for mask is fine
-              # #debugging end
-              
-
               tangent_x = src_patch_points[patch_idx][outputs['mask_x']] - src_patch_points[patch_idx]
               tangent_y = src_patch_points[patch_idx][outputs['mask_y']] - src_patch_points[patch_idx]
-              #normalize
-              # tangent_x = tangent_x / tangent_x.norm(dim = -1).unsqueeze(dim=-1) 
-              # tangent_y = tangent_y / tangent_y.norm(dim = -1).unsqueeze(dim=-1) 
               tangent_x = F.normalize(tangent_x, dim = -1)
               tangent_y = F.normalize(tangent_y, dim = -1)
               loss_patch_normal.append((tangent_x * target_patch_normals[patch_idx][closest_id]).sum(-1).abs().mean())
               loss_patch_normal.append((tangent_y * target_patch_normals[patch_idx][closest_id]).sum(-1).abs().mean())
-          
           if args.output_normal:
             closest_id = torch.argmin(patch_distance, dim = 1)
             tangent_x = src_patch_points[patch_idx][outputs['mask_x']] - src_patch_points[patch_idx]
@@ -2833,9 +2378,6 @@ class SetCriterion_Patch(nn.Module):
             flag_equasize = True
           
           target_patch_points_batch = list_to_padded(target_patch_points, (target_point_clouds_length.max(), 3), equisized = flag_equasize)
-
-          # print('target dtype: ', target_patch_points_batch.dtype)
-          # print('src dtype: ',  src_patch_points.dtype)
           target_nn = knn_points(target_patch_points_batch, src_patch_points, lengths1=target_point_clouds_length)
           target_cd = target_nn.dists[...,0]
           loss_geometry_batch = (target_cd.sum(-1) / target_point_clouds_length).mean()
@@ -2850,23 +2392,16 @@ class SetCriterion_Patch(nn.Module):
         """
         assert 'pred_patch_points' in outputs
         idx = self._get_src_permutation_idx(indices)
-        # target_closeness = torch.cat([t["u_closed"][J] for t, (_, J) in zip(targets, indices)])
-        # print('target closessness: ', target_closeness)
-
         src_patch_points = outputs['pred_patch_points'][idx]
         print('indices shape: ', indices[0][0].shape)
-        #print(len(targets))
         target_patch_points_list = [[t['patch_points'][j] for j in i.numpy().tolist()] for t, (_, i) in zip(targets, indices)]#torch.cat(, dim=0)
         target_patch_area_weighting = torch.cat([t['patch_area_weighting'][i] for t, (_, i) in zip(targets, indices)], dim=0).to(src_patch_points.device)
         assert(target_patch_area_weighting.shape[0] == src_patch_points.shape[0])
         target_patch_points = target_patch_points_list[0]
         for i in range(1, len(target_patch_points_list)):
           target_patch_points += target_patch_points_list[i]
-        
-        #print(len(src_patch_points), len(target_patch_points))
         assert(len(src_patch_points) == len(target_patch_points))
         assert(target_patch_area_weighting.shape[0] == len(target_patch_points))
-        #compute chamfer distance
         loss_geometry = []
         for patch_idx in range(len(target_patch_points)):
           patch_distance = torch.cdist(src_patch_points[patch_idx], target_patch_points[patch_idx].to(src_patch_points.device), p=2.0) #in shape [src_patch_points, tgt_patch_points]
@@ -2874,7 +2409,6 @@ class SetCriterion_Patch(nn.Module):
           if(args.single_dir_patch_chamfer): #default: false
             loss_geometry.append(target_patch_area_weighting[patch_idx]*patch_distance.min(0).values.mean())
           else:
-            # loss_geometry.append(target_patch_area_weighting[patch_idx]*(patch_distance.min(0).values.mean() + 0.2*patch_distance.min(-1).values.mean()) / 1.2)
             loss_geometry.append((patch_distance.min(0).values.mean() + patch_distance.min(-1).values.mean()) / 2.0)
         
         losses = {}
@@ -2883,18 +2417,13 @@ class SetCriterion_Patch(nn.Module):
         if args.eval_res_cov:
           target_patch_pc_list = [[t['patch_pcs'][j] for j in i.numpy().tolist()] for t, (_, i) in zip(targets, indices)]#torch.cat(, dim=0)
           src_logits = outputs['closed_patch_logits'][idx]
-          # print('src closessness: ', src_logits)
           src_uclosed = src_logits[:,0] < src_logits[:,1]
           target_classes = torch.cat([t["u_closed"][J] for t, (_, J) in zip(targets, indices)])
-          # print('target closeness: ', target_classes)
 
           if args.eval_param:
-            # print('idx: ', idx)
             src_with_param = outputs['pred_patch_with_param'][idx]
             src_type_logits = outputs['pred_patch_type'][idx]
             src_param = outputs['pred_patch_param'][idx]
-            # print('src_param shape: ', src_param.shape)
-            
 
           target_patch_pcs = target_patch_pc_list[0]
           for i in range(1, len(target_patch_pc_list)):
@@ -2903,59 +2432,17 @@ class SetCriterion_Patch(nn.Module):
           loss_res_filter = []
           patch_idx_filtered = []
           for patch_idx in range(len(target_patch_pcs)):
-            # faces = get_patch_mesh_faces(args.points_per_patch_dim, args.points_per_patch_dim, src_uclosed[patch_idx])
-            # mesh = trimesh.Trimesh(vertices = src_patch_points[patch_idx].detach().cpu().numpy(), faces = faces)
-
             if args.eval_param and src_with_param[patch_idx] > 0.5:
-              #considering both distance to patch and parametric, because for cone, parametric distance is a little bit hight
-              
-              # para_dist = self.routines[torch.argmax(src_type_logits[patch_idx]).item()](src_patch_points[patch_idx], src_param[patch_idx], self.sqrt)
               para_dist = self.routines[torch.argmax(src_type_logits[patch_idx]).item()](target_patch_pcs[patch_idx], src_param[patch_idx], self.sqrt)
-              # np.savetxt('plane.xyz', src_patch_points[patch_idx].detach().cpu().numpy())
-
-              # if patch_idx == 0:
-              #   np.savetxt('pycone_pred0.xyz', src_patch_points[patch_idx].detach().cpu().numpy())
-              #   np.savetxt('pycone_gt0.xyz', target_patch_pcs[patch_idx].detach().cpu().numpy())
-                
-
-              # print('params: ',src_param[patch_idx])
-              # print('patch type: ', torch.argmax(src_type_logits[patch_idx]).item())
-              # print('patch param dist: {}'.format(para_dist))
-              
-              
-              
-              # loss_res.append(para_dist.item())
-              # continue
-
-            #spline version
-            #extend version
+            #spline
             pts = src_patch_points[patch_idx].detach().cpu().numpy()
-            # pts, faces = get_patch_mesh_pts_faces(pts, args.points_per_patch_dim, args.points_per_patch_dim, src_uclosed[patch_idx], True, 0.05)
             
             #prediction
             pts, faces = get_patch_mesh_pts_faces(pts, args.points_per_patch_dim, args.points_per_patch_dim, src_uclosed[patch_idx],0, True, 0.05)
-
-            #ground truth
-            # pts, faces = get_patch_mesh_pts_faces(target_patch_points[patch_idx].detach().cpu().numpy(), args.points_per_patch_dim, args.points_per_patch_dim, target_classes[patch_idx],0, True, 0.05)
-            
-
-            # print('pts size: ', pts.shape)
-            # print('faces max', np.max(faces))
             mesh = trimesh.Trimesh(vertices = pts, faces = faces)
-
-
-            # print("src patch closeness: ", src_uclosed[patch_idx])
-            # mesh.export('patchmesh_{}.obj'.format(patch_idx))
-            # np.savetxt('{}_patchpc.xyz'.format(patch_idx), target_patch_pcs[patch_idx].detach().cpu().numpy())
-
-            # patch_distance = torch.cdist(src_patch_points[patch_idx], target_patch_pcs[patch_idx].to(src_patch_points.device), p=2.0) #in shape [src_patch_points, tgt_patch_points]
-            # assert(len(patch_distance.shape) == 2)
-            # loss_res.append(patch_distance.min(0).values.mean())
             
             #mesh version
             (closest_points,distances,triangle_id) = mesh.nearest.on_surface(target_patch_pcs[patch_idx].detach().cpu().numpy()) #here distance is squared norm
-            # print('distance shape: ', distances.s
-            # print('patch {} distance: {}'.format(patch_idx, distances.mean()))
             if args.eval_param and src_with_param[patch_idx] > 0.5:
               loss_res.append(min(para_dist.item(), distances.mean()))
             else:
@@ -2965,16 +2452,11 @@ class SetCriterion_Patch(nn.Module):
               loss_res_filter.append(loss_res[-1])
               patch_idx_filtered.append(indices[0][0][patch_idx].item())
 
-          # print('patch idx before: ', patch_idx_filtered)
-
           #append unmatched id
           matched_id_set = set(indices[0][0].tolist())
           unmatched_id_set = set(range(outputs['pred_patch_points'][0].shape[0])) - matched_id_set
           patch_idx_filtered += list(unmatched_id_set)
 
-          # print('patch idx after: ', patch_idx_filtered)
-            
-          # loss_res = torch.tensor(loss_res)
           losses['res'] = torch.tensor(sum(loss_res) / len(loss_res))
           if len(loss_res_filter) > 0:
             losses['res_filter'] = torch.tensor(sum(loss_res_filter) / len(loss_res_filter))
@@ -2990,11 +2472,6 @@ class SetCriterion_Patch(nn.Module):
         close_indices = torch.where(loss_geometry < args.dist_th)
         pred_logits = outputs['pred_patch_logits'][0]
         device = pred_logits.device
-        # tgt_lengths = torch.as_tensor([v.shape[0] for v in targets], device=device)
-        # # Count the number of predictions that are NOT "no-object" (which is the last class)
-        # card_pred = (pred_logits.argmax(-1) != pred_logits.shape[-1] - 1).sum(1)
-        # card_err = F.l1_loss(card_pred.float(), tgt_lengths.float())
-        # losses = {'cardinality_error': card_err}
         pred_labels = pred_logits.softmax(-1)
         pred_valid_id = torch.where(pred_labels[:, 0]>args.val_th)
         losses['precision'] = torch.tensor(close_indices[0].shape[0] / max(1, pred_valid_id[0].shape[0]), device=device)
@@ -3005,11 +2482,7 @@ class SetCriterion_Patch(nn.Module):
         src_logits = outputs['pred_patch_type']
 
         idx = self._get_src_permutation_idx(indices)
-        # print('idx: ', idx)
-        # print('close idx: ', close_indices)
-        # print('idx shape {} close idx shape {}'.format(len(idx[0]), len(close_indices[0])))
         target_classes = torch.cat([t["labels"][J] for t, (_, J) in zip(targets, indices)]).to(src_logits.device)
-        #target_classes_o = torch.cat([torch.zeros(J.shape, device=src_logits.device) for t, (_, J) in zip(targets, indices)])
 
         losses['type_class_accuracy'] = accuracy(src_logits[idx], target_classes)[0]
         return losses
@@ -3058,9 +2531,6 @@ class SetCriterion_Patch(nn.Module):
           indices = self.matcher(chunk1, targets[:2])
           indices2 = self.matcher(chunk2, targets[2:])
           indices += indices2
-        #t1 = time.time()
-        #print("patch assignment time cost:", t1-t0)
-        
         patch_matching_indices = {}
         patch_matching_indices['indices'] = indices
         
@@ -3139,7 +2609,6 @@ def tf_summary_from_dict(loss_dict, is_training):
   return summary_list#tf.summary.merge(summary_list)
 
 def save_on_master(*args, **kwargs):
-    #if is_main_process():
     torch.save(*args, **kwargs)
 
 def prepare_experiment_folders(exp_name):
