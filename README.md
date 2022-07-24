@@ -146,6 +146,7 @@ The C++ project can be generated with CMake:
 
         $ cd PATH_TO_COMPLEXGEN\GeometricRefine
         $ mkdir build
+        $ cd build
         $ cmake ..
 
 Then you can build _GeometricRefine.sln_ with Visual Studio. After that, you'll find _GeometricRefine.exe_ under _PATH_TO_COMPLEXGEN/GeometricRefine/Bin_.
