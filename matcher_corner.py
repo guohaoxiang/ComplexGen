@@ -57,21 +57,14 @@ class HungarianMatcher_Corner(nn.Module):
         # We flatten to compute the cost matrices in a batch
         out_prob = outputs["pred_logits"].flatten(0, 1).softmax(-1)  # [batch_size * num_queries, num_classes]
         out_corner_position = outputs["pred_corner_position"].flatten(0, 1)  # [batch_size * num_queries, 3]
-        #print(out_prob.shape, out_corner_position.shape)
-
-        # Also concat the target labels and boxes
-
 
         # Compute the classification cost. Contrary to the loss, we don't use the NLL,
         # but approximate it in 1 - proba[target class].
         # The 1 is a constant that doesn't change the matching, it can be ommitted.
         if not self.flag_eval:
-        # if True:
             target_corner_position = torch.cat([pos for pos in target_corner_position_list])
-            #print(target_corner_position.shape)
             
             #certainly, target corner points should be all non-empty
-            #tgt_ids = torch.cat([v["labels"] for v in targets])
             tgt_ids = torch.zeros(target_corner_position.shape[0], dtype=torch.long)
             if(not self.using_prob_in_matching):
                 cost_class = -(out_prob[:, tgt_ids] + 1e-6).log()
@@ -80,9 +73,6 @@ class HungarianMatcher_Corner(nn.Module):
 
             # Compute the L2 cost between corners
             cost_corner_position = torch.cdist(out_corner_position, target_corner_position, p=2).square()
-
-            # Compute the giou cost betwen boxes
-            #cost_giou = -generalized_box_iou(box_cxcywh_to_xyxy(out_bbox), box_cxcywh_to_xyxy(tgt_bbox))
 
             # Final cost matrix
             C = self.cost_position*cost_corner_position + self.cost_class * cost_class
@@ -97,12 +87,9 @@ class HungarianMatcher_Corner(nn.Module):
             out_prob = out_prob.view(bs,num_queries, 2)
             indices = []
             for sample_batch_idx in range(bs):
-                # labels = torch.argmax(out_prob[sample_batch_idx], dim=-1)
-                # valid_id = torch.where(labels == 0)
                 valid_id = torch.where(out_prob[sample_batch_idx][:,0] > self.val_th)
                 cost_corner_position = torch.cdist(out_corner_position[sample_batch_idx][valid_id], target_corner_position_list[sample_batch_idx], p=2).square()
                 C = self.cost_position*cost_corner_position
-                # C = C.view(bs, num_queries, -1).cpu()
                 if valid_id[0].shape[0] == 0:
                     tmp = np.array([], dtype=np.int64)
                     indices.append((tmp,tmp))
