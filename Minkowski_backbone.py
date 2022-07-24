@@ -3309,7 +3309,7 @@ def model_evaluation_complex(model_shape, corner_loss_criterion, curve_loss_crit
   df.to_excel(filepath, index=True)
 
 
-def model_evaluation_yaml(model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, train_iter, flag_output = True):
+def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, train_iter, flag_output = True):
   import trimesh
   from numpy import linalg as LA
   from scipy.spatial import cKDTree
@@ -4557,7 +4557,7 @@ def eval_pipeline(flag_eval = True):
   if not args.evalfinal and not args.evaltopo:
     return model_evaluation(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output, test_folder = test_folder)
   elif args.evalfinal:
-    return model_evaluation_yaml(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output)
+    return model_evaluation_json(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output)
 
   elif args.evaltopo:
     return model_evaluation_complex(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output)
