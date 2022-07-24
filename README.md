@@ -111,8 +111,8 @@ If you want to train ComplexNet from scratch, run:
 
         $ ./scripts/train_default.sh
 
-By default, the ComplexNet is trained on a server with 8 V100 GPUs.
-You can change the numder of GPUs by setting the _--gpu_ flag in scripts/train_default, and change batch size by setting the _batch_size_ flag.
+By default, ComplexNet is trained on a server with 8 V100 GPUs.
+You can change the numder of GPUs by setting the _--gpu_ flag in _./scripts/train\_default.sh_, and change batch size by setting the _batch_size_ flag.
 The training takes about 3 days to converge. 
 
 
@@ -159,7 +159,7 @@ If you are processing noisy/partial data, please replace the second command with
 
         $ python .\scripts\geometric_refine.py --noise
 
-You will find the generate json files under 'complex_path'. The description of json file can be found  [here](docs/geometric_refinement_json_description.md)
+You will find the generate json files under 'complex_path'. Description of the generated json file can be found  [here](docs/geometric_refinement_json_description.md)
 
 ## Evaluation
 
