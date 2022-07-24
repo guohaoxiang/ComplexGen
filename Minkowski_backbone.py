@@ -151,8 +151,6 @@ def get_args_parser():
     
     #transformer feature embedding
     parser.add_argument("--curve_embedding_mlp_layers", default=3, type=int)
-    parser.add_argument('--enable_aux_loss', action='store_true',
-                        help="Disables auxiliary decoding losses (loss at each layer)") #only enable_aux_loss is callable
     # training
     parser.add_argument('--gpu', default="0,1,2", type=str,
                         help="gpu id to be used")
@@ -191,12 +189,7 @@ def get_args_parser():
 
 parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])
 args = parser.parse_args()
-print("enable_aux_loss:{}".format(args.enable_aux_loss))
 m = args.m
-print('m value: ', m)
-
-print('eval matches:', args.eval_matched)
-
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 num_of_gpus = len(args.gpu.split(","))
 print("Utilize {} gpus".format(num_of_gpus))
@@ -914,10 +907,7 @@ class DETR_Curve_Tripath(nn.Module):
         else:
           curve_shape_scale = F.elu(self.curve_shape_scale_embed(hs)).unsqueeze(-2) + 1.0
         
-        if args.enable_aux_loss:
-          parameterization_coord = (torch.arange(points_per_curve, dtype=torch.float32, device=hs.device) / (points_per_curve - 1)).view(1, 1, 1, points_per_curve, 1).repeat(args.dec_layers, args.batch_size, args.num_curve_queries, 1, 1)
-        else:
-          parameterization_coord = (torch.arange(points_per_curve, dtype=torch.float32, device=hs.device) / (points_per_curve - 1)).view(1, 1, 1, points_per_curve, 1).repeat(1, args.batch_size, args.num_curve_queries, 1, 1)
+        parameterization_coord = (torch.arange(points_per_curve, dtype=torch.float32, device=hs.device) / (points_per_curve - 1)).view(1, 1, 1, points_per_curve, 1).repeat(1, args.batch_size, args.num_curve_queries, 1, 1)
         
         if args.no_pe:
           if True:
@@ -1096,11 +1086,7 @@ class DETR_Patch_Tripath(nn.Module):
           patch_shape_scale = F.elu(self.patch_shape_scale_embed(hs)).unsqueeze(-2) + 1.0
         
         parameterization_coord = torch.arange(points_per_patch_dim*points_per_patch_dim, dtype=torch.int32, device=hs.device)
-        if args.enable_aux_loss:
-        # if True:
-          parameterization_coord = (torch.cat([(parameterization_coord // points_per_patch_dim).view(-1,1), (parameterization_coord % points_per_patch_dim).view(-1,1)], dim=1).float() / (points_per_patch_dim - 1)).view(1, 1, 1, points_per_patch_dim*points_per_patch_dim, 2).repeat(args.dec_layers, args.batch_size, args.num_patch_queries, 1, 1)
-        else:
-          parameterization_coord = (torch.cat([(parameterization_coord // points_per_patch_dim).view(-1,1), (parameterization_coord % points_per_patch_dim).view(-1,1)], dim=1).float() / (points_per_patch_dim - 1)).view(1, 1, 1, points_per_patch_dim*points_per_patch_dim, 2).repeat(1, args.batch_size, args.num_patch_queries, 1, 1)
+        parameterization_coord = (torch.cat([(parameterization_coord // points_per_patch_dim).view(-1,1), (parameterization_coord % points_per_patch_dim).view(-1,1)], dim=1).float() / (points_per_patch_dim - 1)).view(1, 1, 1, points_per_patch_dim*points_per_patch_dim, 2).repeat(1, args.batch_size, args.num_patch_queries, 1, 1)
         
         #output normals works only for no_pe
         if args.no_pe:
@@ -2054,12 +2040,8 @@ class SetCriterion_Curve(nn.Module):
                 indices = self.matcher(aux_outputs, targets)
                 curve_matching_indices['aux_outputs'].append({'indices':indices})
                 for loss in self.losses:
-                    #if loss == 'masks':
-                    #    # Intermediate masks losses are too costly to compute, we ignore them.
-                    #    continue
                     kwargs = {}
                     if loss == 'labels':
-                        # Logging is enabled only for the last layer
                         kwargs = {'log': False}
                     l_dict = self.get_loss(loss, aux_outputs, targets, indices, num_corners, **kwargs)
                     l_dict = {k + f'_aux_{i}': v for k, v in l_dict.items()}
@@ -2556,12 +2538,8 @@ class SetCriterion_Patch(nn.Module):
                 indices = self.matcher(aux_outputs, targets)
                 patch_matching_indices['aux_outputs'].append({'indices':indices})
                 for loss in self.losses:
-                    #if loss == 'masks':
-                    #    # Intermediate masks losses are too costly to compute, we ignore them.
-                    #    continue
                     kwargs = {}
                     if loss == 'labels':
-                        # Logging is enabled only for the last layer
                         kwargs = {'log': False}
                     l_dict = self.get_loss(loss, aux_outputs, targets, indices, num_corners, **kwargs)
                     l_dict = {k + f'_aux_{i}': v for k, v in l_dict.items()}
@@ -2661,7 +2639,7 @@ def build_unified_model_tripath(device, flag_eval = False):
   ############# build transformer #############
   tripath_transformer = build_transformer_tripath(args)
   
-  model_shape = DETR_Shape_Tripath(backbone, position_encoding, tripath_transformer, args.num_corner_queries, args.num_curve_queries, args.num_patch_queries, aux_loss=args.enable_aux_loss, device = device).to(device) #queries equals to 100, no aux loss
+  model_shape = DETR_Shape_Tripath(backbone, position_encoding, tripath_transformer, args.num_corner_queries, args.num_curve_queries, args.num_patch_queries, aux_loss=False, device = device).to(device) #queries equals to 100, no aux loss
 
   ############# build matcher #############
   matcher_corner = build_matcher_corner(args, flag_eval = flag_eval)
@@ -2685,15 +2663,6 @@ def build_unified_model_tripath(device, flag_eval = False):
     
     if args.patch_lap or args.patch_lapboundary:
       patch_weight_dict['loss_patch_lap'] = args.patch_lap_loss_coef
-    if args.enable_aux_loss:
-      aux_weight_dict_corner = {}
-      for i in range(args.dec_layers - 1):
-        aux_weight_dict_corner.update({k + f'_aux_{i}': v for k, v in corner_weight_dict.items()})
-      corner_weight_dict.update(aux_weight_dict_corner)
-      aux_weight_dict_curve = {}
-      for i in range(args.dec_layers - 1):
-        aux_weight_dict_curve.update({k + f'_aux_{i}': v for k, v in curve_weight_dict.items()})
-      curve_weight_dict.update(aux_weight_dict_curve)
     
     corner_losses = ['labels', 'cardinality', 'geometry']
     curve_losses = ['labels', 'cardinality', 'geometry', 'closed_curve', 'curve_type']
