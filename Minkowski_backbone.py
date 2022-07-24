@@ -3317,31 +3317,13 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
   import json
   with_curve_corner = True
   flag_with_param = args.eval_param
-  # suffix = "_opt_mix_final.yml"
-  # suffix = "_prediction_final.yml"
-  # suffix = "_prediction_input.json"
-  # suffix = "_opt_mix_final.json"
   suffix = args.suffix
-  # suffix = "_prediction.complex"
-
-  # suffix = "_prediction_final.json"
-
-
-
-  # suffix = "_opt_post_mix.complex"
-  # suffix = "_prediction_input.yml"
-  # suffix = "_opt_post_mix_final.yml"
-  # suffix = "_opt_mix_input.yml"
-  
-  # suffix = "_opt_post_mix_input.yml"
-  # suffix = "_gt.complex"
   def load_yaml_json_file(fn):
     n_curve_sample = 34
     n_patch_sample = 100
     pred_data = {}
     if fn.endswith('yml'):
       f = open(fn, 'r')
-      # lines = f.readlines()
       info = yaml.safe_load(f)   
       f.close()
     elif fn.endswith('json'):
@@ -3370,12 +3352,10 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
     for i in range(n_patch):
       for j in range(n_patch_sample):
         for k in range(3):
-          # pred_data['pred_patch_points'][0][i][j][k] = float(line[1 + 3 * j + k])
           pred_data['pred_patch_points'][0][i][j][k] = patches[i]['grid'][3 * j + k]
       pred_data['pred_patch_type'][0][i][patch_type_to_id(patches[i]['type'])] = 1.0
       if patches[i]['u_closed']: #ignore v_closed
         pred_data['closed_patch_logits'][0][i][0] = 0.0
-        # pred_data['closed_patch_logits'][0][i][1] = 1.0
 
       else:
         pred_data['closed_patch_logits'][0][i][0] = 1.0
@@ -3383,13 +3363,8 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
       
       if flag_with_param and patches[i]['with_param'] == True:
         pred_data['pred_patch_with_param'][0][i]  = 1.0
-        # pred_data['pred_patch_type_name'][i] = patches[i]['type']
-        #detailed parameters to be add
-        # print('type name: ', patches[i]['type'])
         for j in range(7):
           pred_data['pred_patch_param'][0][i][j] = patches[i]['param'][j]
-    #patch2patch info to be evaluated
-    #no curve info given yet
     if with_curve_corner:
       if "corners" in info:
         if info["corners"] == None:
@@ -3418,15 +3393,11 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
       for i in range(n_curve):
         for j in range(n_curve_sample):
           for k in range(3):
-            # pred_data['pred_curve_points'][0][i][j][k] = float(line[2 + 3 * j + k])
             pred_data['pred_curve_points'][0][i][j][k] = info['curves'][i]['pts'][3 * j + k]
         pred_data['pred_curve_type'][0][i][curve_type_to_id(info['curves'][i]['type'])] = 1.0
         if info['curves'][i]['closed']:
-          # pred_data['closed_curve_logits'][0][i][0] = 1.0
           pred_data['closed_curve_logits'][0][i][1] = 1.0
-
         else:
-          # pred_data['closed_curve_logits'][0][i][1] = 1.0
           pred_data['closed_curve_logits'][0][i][0] = 1.0
 
       pred_data['patch2curve'] = info['patch2curve']
@@ -3441,48 +3412,9 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
   curve_loss_criterion.eval()
   patch_loss_criterion.eval()
   assert(args.batch_size == 1)
-  #test_data = train_data_loader(1, voxel_dim=voxel_dim, device=device, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, data_folder="test_data")
   data_loader_iterator = iter(train_data)
-  
-  # obj_dir = os.path.join("experiments", args.experiment_name, "test_obj")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "twomodel")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "exp8_fitting_1208")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "exp8_1_fitting")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "exp_81_mix_val03_simpl")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "exp_81_test_obj_250k_mix_val03")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "exp16_input128_fitting1226")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp9_fitting")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp6_fitting")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp14_fitting")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "exp8_first_round_fail")
-
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp13_rest_fitting")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp7_all_0106")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp8_fitting_0106")
-
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp13_all_0107")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp7_allnb")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp7_allnb")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp7_all_nb03")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp7_allnb_0113")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp7_600_add_fitting")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp7_600_mul_fitting")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp7_prediction_complex")
-  # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp7_test0119_fitting")
   obj_dir = os.path.join("experiments", args.experiment_name, args.folder)
-
-
-
-
-
-
-
-
-
   if args.vis_test:
-    # obj_dir = os.path.join("experiments", args.experiment_name, "vis_test")
-    # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp9_vistest_fitting")
-    # obj_dir = os.path.join("experiments", args.experiment_name, "1208_exp8_fitting_0106")
     obj_dir = os.path.join("experiments", args.experiment_name, args.folder)
   if args.vis_train:
     obj_dir = os.path.join("experiments", args.experiment_name, "vis_train")
@@ -3490,7 +3422,6 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
   
   test_statistics = []
   sample_name_list = []
-  
   # sample_count = 0
   def export_curves(curve_points, points_number_per_curve, output_obj_file):
         curve_points = np.reshape(curve_points, [-1,3])
@@ -3503,8 +3434,6 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
             wf.write("l {} {}\n".format(i+1, i+2))
 
   dict_sum = {}
-
-  #valid data from test dictionary
   path = obj_dir
   allfs = os.listdir(obj_dir)
   all_valid_id = []
@@ -3519,8 +3448,6 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
     try:
       data_item = next(data_loader_iterator)
     except StopIteration:
-      #data_loader_iterator = iter(train_data)
-      #data_item = next(data_loader_iterator)
       break
     locations = data_item[0].to(device)
     features = data_item[1].to(device)
@@ -3540,11 +3467,7 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
     if not args.regen and os.path.exists(output_pkl_name):
       f = open(output_pkl_name, 'rb')
       summary_loss_dict = pickle.load(f)
-      # if (len(summary_loss_dict) != 42):
-      #   print('summary_loss_dict: ')
-      # assert(len(summary_loss_dict) == 42)
       test_statistics.append(list(summary_loss_dict.values()))
-      # sample_id.append(cur_id)
       sample_name_list.append(cur_id)
       f.close()
 
@@ -3554,9 +3477,6 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
         else:
           dict_sum[k] = summary_loss_dict[k]
       continue
-
-    # sample_count+=1
-    #convert target_curves_list and target_patches_list to cuda tensors
     for i in range(len(target_curves_list)):
       for k in target_curves_list[i]:
         target_curves_list[i][k] = target_curves_list[i][k].to(device)
@@ -3567,7 +3487,6 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
           for j in range(len(target_patches_list[i][k])): #list
             target_patches_list[i][k][j] = target_patches_list[i][k][j].to(device)
         else:
-          # print('k: ', k)
           target_patches_list[i][k] = target_patches_list[i][k].to(device)
     
     #supervision
@@ -3576,7 +3495,6 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
       batch_corner_numbers.append((corner_batch_idx==i).sum())
     target_corner_points_list = torch.split(corner_points, batch_corner_numbers)
     
-    #batch size should be one
     yaml_file = os.path.join(path, "{}{}".format(cur_id, suffix))
     if yaml_file.endswith('.complex'):
         pred_data = load_complex_file(yaml_file, device)
@@ -3603,13 +3521,11 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
     for k in patch_loss_dict.keys():
         if not k == 'patch_idx_filter':
           summary_loss_dict["patch_" + k] = patch_loss_dict[k].item()
-    # print('patch matching indices: ', patch_matching_indices)
     summary_loss_dict["patch_recall_filtered"] = summary_loss_dict["patch_recall"] * summary_loss_dict["patch_n_patch_filter"] / (summary_loss_dict["patch_n_patch"] + 1e-8)
 
     if args.eval_res_cov:
       patch_close_logits = pred_data['closed_patch_logits'][0].detach().cpu().numpy()
       patch_uclosed = patch_close_logits[:,0] < patch_close_logits[:,1]
-      # distances = compute_overall_singlecd(pred_data['pred_patch_points'][0].detach().cpu().numpy(), patch_uclosed, input_pointcloud)
       if not args.eval_param:
         if args.eval_matched:
           distances, distances_matched = compute_overall_singlecd(pred_data['pred_patch_points'][0].detach().cpu().numpy(), patch_uclosed, input_pointcloud, patch_matching_indices)
@@ -3617,12 +3533,10 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
           distances = compute_overall_singlecd(pred_data['pred_patch_points'][0].detach().cpu().numpy(), patch_uclosed, input_pointcloud, patch_matching_indices)
       else:
         if args.eval_matched:
-          # distances, distances_matched = compute_overall_singlecd_param(pred_data, input_pointcloud, patch_matching_indices)
           distances, distances_matched = compute_overall_singlecd_param(pred_data, input_pointcloud, patch_loss_dict['patch_idx_filter'])
         else:
           distances= compute_overall_singlecd_param(pred_data, input_pointcloud, patch_matching_indices)
       
-      # summary_loss_dict["overall_single_cd"] = distances.mean()
       summary_loss_dict['p_cov_1'] = (distances < 0.01).sum() / input_pointcloud.shape[0]
       if args.noisetest:
         noise_map = {1: 0.01, 2: 0.02, 3: 0.05}
@@ -3631,10 +3545,7 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
         summary_loss_dict['p_cov_2x{}'.format(cur_noise)] = (distances < 2 * cur_noise).sum() / input_pointcloud.shape[0]
       if args.eval_matched:
         summary_loss_dict['p_cov_1_matched'] = (distances_matched < 0.01).sum() / input_pointcloud.shape[0]
-      # summary_loss_dict['p_cov_2'] = (distances < 0.02).sum() / input_pointcloud.shape[0]
     
-    #topo error
-
     if with_curve_corner:
       pred_patch2curve = pred_data['patch2curve'] #lists of lists
       pred_curve2corner = pred_data['curve2corner'] #lists of lists
@@ -3642,24 +3553,12 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
       num_gt_patches = len(target_patches_list[0]['u_closed'])
       num_gt_curves = len(target_curves_list[0]['is_closed'])
       num_gt_corners = len(corner_points)
-      # print('corner pts num: ', num_gt_corners)
       if patch_matching_indices['indices'][0][0].shape[0] and curve_matching_indices['indices'][0][0].shape[0]:
-        #patch curve correspondence
-
         pred_patch2curve = torch.tensor(pred_patch2curve, device = device, dtype = torch.float).view(len(pred_patch2curve), -1)
-
         pred_patch2curve = pred_patch2curve[patch_matching_indices['indices'][0][0],][:,curve_matching_indices['indices'][0][0]]
-        
         gt_patch2curve = target_patches_list[0]['patch_curve_correspondence'][patch_matching_indices['indices'][0][1],][:,curve_matching_indices['indices'][0][1]]
         assert(pred_patch2curve.shape == gt_patch2curve.shape)
-        # summary_loss_dict['topo_patch_curve'] = F.binary_cross_entropy(pred_patch2curve.view(-1), gt_patch2curve.view(-1)).item()
-        # summary_loss_dict['topo_patch_curve'] = (pred_patch2curve - gt_patch2curve).abs().mean().item()
-        
-        #update 1224, loss computed based on ground truth
         summary_loss_dict['topo_patch_curve'] = ((pred_patch2curve - gt_patch2curve).abs().sum().item() + num_gt_patches * num_gt_curves - pred_patch2curve.shape[0] * pred_patch2curve.shape[1] ) / (num_gt_patches * num_gt_curves)
-
-
-        #here to compute patch-patch connection
         pred_patch2patch = torch.mm(pred_patch2curve, torch.transpose(pred_patch2curve, 0, 1))
         gt_patch2patch = torch.mm(gt_patch2curve, torch.transpose(gt_patch2curve, 0, 1))
         tmpid = torch.arange(patch_matching_indices['indices'][0][0].shape[0], device=pred_patch2patch.device)
@@ -3667,42 +3566,19 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
         gt_patch2patch[tmpid, tmpid] = 0
         pred_patch2patch[pred_patch2patch > 0.5] = 1
         gt_patch2patch[gt_patch2patch > 0.5] = 1
-        
-        # print("pred p2p: \n", pred_patch2patch)
-        # print("gt p2p: \n", gt_patch2patch)
-
-        # print("pred p2c: \n", pred_patch2curve)
-        # print("gt p2c: \n", gt_patch2curve)
-
-        # summary_loss_dict['topo_patch_patch'] = (pred_patch2patch - gt_patch2patch).abs().mean().item()
-        # modified 1223
         num_match_patches = pred_patch2patch.shape[0]
-        # print('match num: {} all num: {}'.format(num_match_patches, num_gt_patches))
-        # print('curve gt num: ', num_gt_curves)
 
         summary_loss_dict['topo_patch_patch'] = ((pred_patch2patch - gt_patch2patch).abs().sum().item() + num_gt_patches * num_gt_patches - num_match_patches * num_match_patches) / (num_gt_patches * num_gt_patches)
-
-        #filtered version
-        # print('!!!!!!filter set len: ', len(filter_pred_id))
-
         filtered_idx_set = patch_loss_dict['patch_idx_filter']
         filter_pred_id = []
-        # filter_gt_id = []
         for i in range(patch_matching_indices['indices'][0][0].shape[0]):
             if patch_matching_indices['indices'][0][0][i] in filtered_idx_set:
-                # filter_pred_id.append(patch_matching_indices['indices'][0][0][i])
                 filter_pred_id.append(i)
-                # filter_gt_id.append(patch_matching_indices['indices'][0][1][i])
-        # print('len id: ', len(filter_pred_id))
         pred_patch2patch_filter = pred_patch2patch[filter_pred_id][:, filter_pred_id]
         gt_patch2patch_filter = gt_patch2patch[filter_pred_id][:, filter_pred_id]
         summary_loss_dict['topo_patch_patch_filter'] = ((pred_patch2patch_filter - gt_patch2patch_filter).abs().sum().item() + num_gt_patches * num_gt_patches - len(filter_pred_id) * len(filter_pred_id)) / (num_gt_patches * num_gt_patches)
 
-
       else:
-        #to be changed, based on gt size
-        # num_gt_patches = len(target_patches_list[0]['u_closed'])
-        # num_gt_curves = len(target_curves_list[0]['is_closed'])
         if num_gt_patches == 0 or num_gt_curves == 0:
           summary_loss_dict['topo_patch_patch'] = 0.0
           summary_loss_dict['topo_patch_patch_filter'] = 0.0
@@ -3715,32 +3591,20 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
       if curve_matching_indices['indices'][0][0].shape[0] and corner_matching_indices['indices'][0][0].shape[0]:
         pred_curve2corner = torch.tensor(pred_curve2corner, device=device, dtype = torch.float).view(len(pred_curve2corner), -1)
         pred_curve2corner = pred_curve2corner[curve_matching_indices['indices'][0][0],][:,corner_matching_indices['indices'][0][0]]
-        
         cur_curves_gt = target_curves_list[0]
-        
         open_curve_idx = torch.where(cur_curves_gt['is_closed'][curve_matching_indices['indices'][0][1]] < 0.5)
-
         curve2corner_gt = target_curves_list[0]['endpoints'][curve_matching_indices['indices'][0][1]]
-        # curve2corner_gt = target_curves_list[0]['endpoints']
-
         gt_curve2corner = torch.zeros([curve_matching_indices['indices'][0][1].shape[0], target_corner_points_list[0].shape[0]], device=device, dtype = torch.float)
-        
-        # print('gt curve2corner : ', gt_curve2corner.shape)
-        # print('curve2corner: ', curve2corner_gt)
         gt_curve2corner[torch.arange(gt_curve2corner.shape[0]), curve2corner_gt[:,0]] = 1
         gt_curve2corner[torch.arange(gt_curve2corner.shape[0]), curve2corner_gt[:,1]] = 1
-
         for i in range(curve_matching_indices['indices'][0][1].shape[0]):
           ori_curveid = curve_matching_indices['indices'][0][1][i]
           if (target_curves_list[0]['is_closed'][ori_curveid] >= 0.5):
             gt_curve2corner[i] = 0.0
-
         gt_curve2corner = gt_curve2corner[:, corner_matching_indices['indices'][0][1]]
         gt_curve2corner = gt_curve2corner[open_curve_idx]
         pred_curve2corner = pred_curve2corner[open_curve_idx]
         assert(pred_curve2corner.shape == gt_curve2corner.shape)
-        # summary_loss_dict['topo_curve_corner'] = F.binary_cross_entropy(pred_curve2corner.view(-1), gt_curve2corner.view(-1)).item()
-        # summary_loss_dict['topo_curve_corner'] = (pred_curve2corner - gt_curve2corner).abs().mean().item()
         summary_loss_dict['topo_curve_corner'] = ((pred_curve2corner - gt_curve2corner).abs().sum().item() + num_gt_curves * num_gt_corners - pred_curve2corner.shape[0] * pred_curve2corner.shape[1]) / (num_gt_curves * num_gt_corners)
       else:
         if num_gt_curves == 0 or num_gt_corners == 0:
@@ -3751,34 +3615,20 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
       if patch_matching_indices['indices'][0][0].shape[0] and corner_matching_indices['indices'][0][0].shape[0] and curve_matching_indices['indices'][0][0].shape[0]:
         pred_patch2corner = torch.tensor(pred_patch2corner, device=device, dtype = torch.float).view(len(pred_patch2corner), -1)
         pred_patch2corner = pred_patch2corner[patch_matching_indices['indices'][0][0],][:,corner_matching_indices['indices'][0][0]]
-
         cur_curves_gt = target_curves_list[0]
-        
         open_curve_idx = torch.where(cur_curves_gt['is_closed'][curve_matching_indices['indices'][0][1]] < 0.5)
-
         curve2corner_gt = target_curves_list[0]['endpoints'][curve_matching_indices['indices'][0][1]]
-        # curve2corner_gt = target_curves_list[0]['endpoints']
-
         gt_curve2corner = torch.zeros([curve_matching_indices['indices'][0][1].shape[0], target_corner_points_list[0].shape[0]], device=device, dtype = torch.float)
-        
-        # print('gt curve2corner : ', gt_curve2corner.shape)
-        # print('curve2corner: ', curve2corner_gt)
         gt_curve2corner[torch.arange(gt_curve2corner.shape[0]), curve2corner_gt[:,0]] = 1
         gt_curve2corner[torch.arange(gt_curve2corner.shape[0]), curve2corner_gt[:,1]] = 1
-
         for i in range(curve_matching_indices['indices'][0][1].shape[0]):
           ori_curveid = curve_matching_indices['indices'][0][1][i]
           if (target_curves_list[0]['is_closed'][ori_curveid] >= 0.5):
             gt_curve2corner[i] = 0.0
-
         gt_curve2corner = gt_curve2corner[:, corner_matching_indices['indices'][0][1]]
         gt_curve2corner = gt_curve2corner[open_curve_idx]
-
         gt_patch2curve = target_patches_list[0]['patch_curve_correspondence'][patch_matching_indices['indices'][0][1],][:,curve_matching_indices['indices'][0][1]]
-
-        
         gt_patch2corner = torch.mm(gt_patch2curve[:, open_curve_idx[0]], gt_curve2corner)
-        
         gt_patch2corner[gt_patch2corner > 1.0] = 1.0
         assert(gt_patch2corner.shape == pred_patch2corner.shape)
         summary_loss_dict['topo_patch_corner'] = ((pred_patch2corner - gt_patch2corner).abs().sum().item() + num_gt_patches * num_gt_corners - pred_patch2corner.shape[0] * pred_patch2corner.shape[1]) / (num_gt_patches * num_gt_corners)
@@ -3787,7 +3637,6 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
           summary_loss_dict['topo_patch_corner'] = 0.0
         else:
           summary_loss_dict['topo_patch_corner'] = 1.0
-
       if args.eval_selftopo:
         #self topo consistency
         pred_patch2curve = pred_data['patch2curve'] #lists of lists
@@ -3797,7 +3646,6 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
         summary_loss_dict['cons_curve_point'] = 0.0
         summary_loss_dict['cons_curve_patch'] = 0.0
         summary_loss_dict['cons_matrix'] = 0.0
-        
         if not pred_patch2curve == None and len(pred_patch2curve[0]) > 0:
           #patch curve not none
           pred_patch2curve = torch.tensor(pred_patch2curve, device = device, dtype = torch.float).view(len(pred_patch2curve), -1)
@@ -3809,52 +3657,35 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
             if len(pred_curve2corner) > 0:
                 pred_curve2corner = torch.tensor(pred_curve2corner, device=device, dtype = torch.float).view(len(pred_curve2corner), -1)
                 #pred open idx to get
-                # np.savetxt('closed_logit.txt', pred_data['closed_curve_logits'][0].cpu().numpy())
                 open_curve_idx = torch.where(pred_data['closed_curve_logits'][0][:, 0].cpu()> pred_data['closed_curve_logits'][0][:, 1].cpu())
-                # print('all curve size: {} open curve size: {}'.format(pred_data['closed_curve_logits'][0].shape, open_curve_idx[0].shape))
                 if len(open_curve_idx[0]) > 0:
                     curve_point_cons = (torch.sum(pred_curve2corner[open_curve_idx[0]], dim=1) - 2).abs().mean().item()
                     summary_loss_dict['cons_curve_point'] = curve_point_cons
-                # curve_point_cons = (torch.sum(pred_curve2corner, dim=1) - 2).abs().sum().item()
-                
-                # print('mc shape {} cc shape {} patch corner shape {}'.format(pred_patch2curve.shape, pred_curve2corner.shape, pred_patch2corner.shape))
                 matrix_cons = (torch.mm(pred_patch2curve, pred_curve2corner) - 2.0 * pred_patch2corner).abs().mean().item()
                 summary_loss_dict['cons_matrix'] = matrix_cons
         
-      #udpate 0107, eval topo-geom consistency
       pred_patch2curve = pred_data['patch2curve'] #lists of lists
       pred_curve2corner = pred_data['curve2corner'] #lists of lists
       pred_patch2corner = pred_data['patch2corner']
-
       dist_topo_geom = 0.0
       flag_mean = True
-      
-      #update 0113, mean version
-      #update 0118, add valid ratio
+
       pair_dists = []
       topo_sum = 0
-
       patch_pos = pred_data['pred_patch_points'][0]
       curve_pos = pred_data['pred_curve_points'][0]
       corner_pos = pred_data['pred_corner_position'][0]
-      # print('patch shape: {} curve: {} corner: {}'.format(patch_pos.shape, curve_pos.shape, corner_pos.shape))
       assert(len(pred_patch2curve) == len(patch_pos))
-      # assert(len(pred_curve2corner) == len(curve_pos))
       if len(patch_pos) > 0 and len(curve_pos) > 0:
-        #patch2curve
-        # tmp_cd_all = []
         pred_patch2curve = torch.tensor(pred_patch2curve, device = device, dtype = torch.int64).view(len(pred_patch2curve), -1)
         topo_sum += pred_patch2curve.sum()
         for k in range(len(patch_pos)):
           if pred_patch2curve[k].sum() > 0:
             nn_curve = curve_pos[pred_patch2curve[k] > 0.5]
-            # print('nn curve shape: ', nn_curve.shape)
             nn_curve = nn_curve.view(1,-1,3)
             cur_patch = patch_pos[k].view(1,-1,3)
             target_nn = knn_points(nn_curve, cur_patch)
             cur_cd = target_nn.dists[...,0].sqrt()
-            # target_id = target_nn.idx
-            # print('patch curve cd shape: ', cur_cd.shape)
 
             if not flag_mean:
               if cur_cd.max() > args.dist_th_tg:
@@ -3880,14 +3711,10 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
         for k in range(len(patch_pos)):
           if pred_patch2corner[k].sum() > 0:
             nn_corner = corner_pos[pred_patch2corner[k] > 0.5]
-            # print('nn curve shape: ', nn_curve.shape)
             nn_corner = nn_corner.view(1,-1,3)
             cur_patch = patch_pos[k].view(1,-1,3)
             target_nn = knn_points(nn_corner, cur_patch)
             cur_cd = target_nn.dists[...,0].sqrt()
-            # target_id = target_nn.idx
-            # print('patch corner cd shape: ', cur_cd.shape)
-
             
             if not flag_mean:
               if cur_cd.max() > args.dist_th_tg:
@@ -3912,22 +3739,17 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
         for k in range(len(curve_pos)):
           if pred_curve2corner[k].sum() > 0:
             nn_corner = corner_pos[pred_curve2corner[k] > 0.5]
-            # print('nn curve shape: ', nn_curve.shape)
             nn_corner = nn_corner.view(1,-1,3)
             cur_curve = curve_pos[k].view(1,-1,3)
             target_nn = knn_points(nn_corner, cur_curve)
             cur_cd = target_nn.dists[...,0].sqrt()
-            # target_id = target_nn.idx
-            # print('curve corner cd shape: ', cur_cd.shape)
             if not flag_mean:
               if cur_cd.max() > args.dist_th_tg:
-                print('max dist: ', cur_cd.max())
                 print('corner inconsistency for curve: {}\n'.format(k))
               if dist_topo_geom < cur_cd.max():
                 dist_topo_geom = cur_cd.max().item()
             else:
               if cur_cd.mean() > args.dist_th_tg:
-                print('mean dist: ', cur_cd.mean())
                 print('corner inconsistency for curve: {}\n'.format(k))
               if dist_topo_geom < cur_cd.mean():
                 dist_topo_geom = cur_cd.mean().item()
@@ -3936,7 +3758,6 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
             for i in range(len(cur_cd)):
                 pair_dists.append(cur_cd[i].item())
         
-      
       summary_loss_dict['topo_geom_dist'] = dist_topo_geom
       summary_loss_dict['topo_geom_cons_01'] = (dist_topo_geom < 0.1) * 1
       summary_loss_dict['topo_geom_cons_02'] = (dist_topo_geom < 0.2) * 1
@@ -3948,8 +3769,6 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
       summary_loss_dict['topo_valid_ratio003'] = 1.0
       summary_loss_dict['topo_valid_ratio002'] = 1.0
       summary_loss_dict['topo_valid_ratio001'] = 1.0
-      # print('pair dist shape: ', pair_dists.shape)
-      # print('topo sum: ', topo_sum)
       if len(pair_dists) > 0:
         summary_loss_dict['topo_valid_ratio01'] = (pair_dists < 0.1).sum() / len(pair_dists)
         summary_loss_dict['topo_valid_ratio005'] = (pair_dists < 0.05).sum() / len(pair_dists)
@@ -3957,21 +3776,13 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
         summary_loss_dict['topo_valid_ratio003'] = (pair_dists < 0.03).sum() / len(pair_dists)
         summary_loss_dict['topo_valid_ratio002'] = (pair_dists < 0.02).sum() / len(pair_dists)
         summary_loss_dict['topo_valid_ratio001'] = (pair_dists < 0.01).sum() / len(pair_dists)
-      
-
-    # print('length of summaray loss dict: ', len(summary_loss_dict))
-    # print('summaray loss dict: ', summary_loss_dict)
-
     for k in summary_loss_dict:
       if k in dict_sum:
         dict_sum[k] += summary_loss_dict[k]
       else:
         dict_sum[k] = summary_loss_dict[k]
 
-    # print(list(summary_loss_dict.values()))
-    # assert(len(summary_loss_dict) == 13)
     test_statistics.append(list(summary_loss_dict.values()))
-    # sample_id.append(cur_id)
     sample_name_list.append(cur_id)
     f = open(output_pkl_name,"wb")
     pickle.dump(summary_loss_dict, f)
@@ -3984,8 +3795,6 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
   sample_name_list.append("mean")
   test_statistics.append(list(dict_sum.values()))
 
-  # obj
-  # comment on 1223
   np.savetxt(os.path.join(obj_dir, "final_evaluation" + suffix + ".txt"), np.array(test_statistics))
   with open(os.path.join(obj_dir, "test_final_sample_name.txt"), "w") as wf:
     for sample_name in sample_name_list:
@@ -3993,24 +3802,15 @@ def model_evaluation_json(model_shape, corner_loss_criterion, curve_loss_criteri
   print(len(sample_name_list) - 1, "samples in test set")
   
   import pandas as pd
-  ## convert your array into a dataframe
   df = pd.DataFrame(np.array(test_statistics))
-  # df.columns = list(summary_loss_dict.keys())
   df.columns = list(dict_sum.keys())
   df.index = sample_name_list
-  #title_row = pd.Series()
-  #row_df = pd.DataFrame([title_row])
-  #df = pd.concat([row_df, df], ignore_index=True)
-  
   ## save to xlsx file
   filepath = os.path.join(obj_dir, 'final_evaluation' + suffix + '.xlsx')
   if args.part >= 0:
     filepath = filepath.replace('.xlsx', '_part{}.xlsx'.format(args.part))
   
   df.to_excel(filepath, index=True)
-
-
-
 
 def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, train_iter, summary_ref):
   #infact , val_data is used here
@@ -4019,18 +3819,9 @@ def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterio
   corner_loss_criterion.eval()
   curve_loss_criterion.eval()
   patch_loss_criterion.eval()
-
-  # model_shape.train()
-  # corner_loss_criterion.train()
-  # curve_loss_criterion.train()
-  # patch_loss_criterion.train()
-
-  # assert(args.batch_size == 1)
-  #test_data = train_data_loader(1, voxel_dim=voxel_dim, device=device, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, data_folder="test_data")
   data_loader_iterator = iter(train_data)
   
   test_statistics = []
-  # sample_name_list = []
   sample_count = 0
   summary_loss_dict = {}
   for k in summary_ref:
@@ -4040,11 +3831,8 @@ def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterio
     try:
       data_item = next(data_loader_iterator)
     except StopIteration:
-      #data_loader_iterator = iter(train_data)
-      #data_item = next(data_loader_iterator)
       break
     sample_count+=1
-    # print ("sample count: ", sample_count)
     locations = data_item[0].to(device)
     features = data_item[1].to(device)
     corner_points = data_item[2].to(device)
@@ -4079,30 +3867,19 @@ def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterio
     
     #curves
     labels = torch.argmax(curve_predictions['pred_curve_logits'].softmax(-1)[0], dim=-1).cpu().numpy()
-    #curve_type = torch.argmax(curve_predictions['pred_curve_type'].softmax(-1)[0], dim=-1).cpu().numpy()
-    
     pred_curve_type = curve_type_list[torch.argmax(curve_predictions['pred_curve_type'].softmax(-1)[0], dim=-1).cpu().numpy().astype(np.int32)[np.where(labels == 0)]].tolist()
     gt_curve_type = curve_type_list[target_curves_list[0]['labels'].cpu().numpy().astype(np.int32)].tolist()
-    
     curve_points = curve_predictions['pred_curve_points'][0].detach().cpu().numpy()
     effective_curve_points = np.reshape(curve_points[np.where(labels == 0)], [-1,3])
-    #np.savetxt(os.path.join(obj_dir, "pred_curves_{:06d}.xyz".format(sample_id)), effective_curve_points)
-    
     empty_curve_points = np.reshape(curve_points[np.where(labels == 1)], [-1,3])
-    #np.savetxt(os.path.join(obj_dir, "pred_curves_empty_{:06d}.xyz".format(sample_id)), empty_curve_points)
-    
     target_curve_points = np.reshape(target_curves_list[0]['curve_points'].cpu().numpy(), [-1,3])
-    #np.savetxt(os.path.join(obj_dir, "gt_curves_{:06d}.xyz".format(sample_id)), target_curve_points)
     
     #corners
     labels = torch.argmax(corner_predictions['pred_logits'].softmax(-1)[0], dim=-1).cpu().numpy()
     corner_position = corner_predictions['pred_corner_position'][0].detach().cpu().numpy()
     effective_corner_position = corner_position[np.where(labels == 0)]
-    
     empty_corner_position = corner_position[np.where(labels == 1)]
-    
     target_corner_position = target_corner_points_list[0].cpu().numpy()
-    
     #patches
     patch_labels = torch.argmax(patch_predictions['pred_patch_logits'].softmax(-1)[0], dim=-1).cpu().numpy()
     patch_points = patch_predictions['pred_patch_points'][0].detach().cpu().numpy() #in shape [100, 100*100, 3]
@@ -4112,25 +3889,12 @@ def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterio
     gt_patch_type = patch_type_list[target_patches_list[0]['labels'].cpu().numpy().astype(np.int32)].tolist()
     
     max_norm = 0
-    #losses
-    # curve_loss_dict, curve_matching_indices = curve_loss_criterion(curve_predictions, target_curves_list)
-    # curve_weight_dict = curve_loss_criterion.weight_dict
-    # corner_loss_dict, corner_matching_indices = corner_loss_criterion(corner_predictions, target_corner_points_list)
-    # corner_weight_dict = corner_loss_criterion.weight_dict
-    # patch_loss_dict, patch_matching_indices = patch_loss_criterion(patch_predictions, target_patches_list)
-    # patch_weight_dict = patch_loss_criterion.weight_dict
-
-
-    #ori version
     curve_loss_dict, curve_matching_indices = curve_loss_criterion(curve_predictions, target_curves_list)
     curve_weight_dict = curve_loss_criterion.weight_dict
     corner_loss_dict, corner_matching_indices = corner_loss_criterion(corner_predictions, target_corner_points_list)
     corner_weight_dict = corner_loss_criterion.weight_dict
     patch_loss_dict, patch_matching_indices = patch_loss_criterion(patch_predictions, target_patches_list)
     patch_weight_dict = patch_loss_criterion.weight_dict
-
-    
-    #print(loss_dict)
     corner_losses = sum(corner_loss_dict[k].detach() * corner_weight_dict[k] for k in corner_loss_dict.keys() if k in corner_weight_dict)
     curve_losses = sum(curve_loss_dict[k].detach() * curve_weight_dict[k] for k in curve_loss_dict.keys() if k in curve_weight_dict)
     patch_losses = sum(patch_loss_dict[k].detach() * patch_weight_dict[k] for k in patch_loss_dict.keys() if k in patch_weight_dict)
@@ -4155,11 +3919,6 @@ def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterio
           continue
         summary_loss_dict["patch_" + k] += patch_weight_dict[k] * patch_loss_dict[k].detach()
     
-    #accuracy of corner and curve predictions
-    # summary_loss_dict['corner_valid_accuracy'] += corner_loss_dict['corner_prediction_accuracy']
-    # summary_loss_dict['curve_valid_accuracy'] += curve_loss_dict['valid_class_accuracy']
-    # summary_loss_dict['curve_type_accuracy'] += curve_loss_dict['type_class_accuracy']
-
     summary_loss_dict['corner_valid_accuracy'] += corner_loss_dict['corner_prediction_accuracy']
     summary_loss_dict['curve_valid_accuracy'] += curve_loss_dict['valid_class_accuracy']
     summary_loss_dict['curve_type_accuracy'] += curve_loss_dict['type_class_accuracy']
@@ -4180,7 +3939,6 @@ def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterio
         else:
           curve_corner_matching_loss_geom, curve_corner_matching_loss_topo, all_zero_corners, curve_corner_topo_acc = \
             Curve_Corner_Matching_tripath(corner_predictions, curve_predictions, target_corner_points_list, target_curves_list, corner_matching_indices['indices'], curve_matching_indices['indices'])
-        # if(sample_count == 1): print("with curve corner correspondence loss")
         try:
           losses += args.curve_corner_geom_loss_coef*curve_corner_matching_loss_geom.detach() + args.curve_corner_topo_loss_coef*curve_corner_matching_loss_topo.detach()
         except:
@@ -4209,7 +3967,6 @@ def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterio
         if args.topo_acc:
           summary_loss_dict['patch_curve_topoacc'] += patch_curve_topo_acc.detach()
         
-      #to be added for evaluation
       if (args.patch_corner_topo_loss_coef > 0):
         if not args.topo_acc:
           patch_corner_matching_loss_topo, curve_point_loss, curve_patch_loss, patch_close_loss = \
@@ -4218,13 +3975,9 @@ def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterio
           patch_corner_matching_loss_topo, curve_point_loss, curve_patch_loss, patch_close_loss, patch_corner_topo_acc = \
             Patch_Corner_Matching_tripath(corner_predictions, curve_predictions, patch_predictions, target_corner_points_list, target_curves_list, target_patches_list, corner_matching_indices['indices'],curve_matching_indices['indices'], patch_matching_indices['indices'])
         losses += args.patch_corner_topo_loss_coef*patch_corner_matching_loss_topo
-        #four other term: 
         losses += args.topo_loss_coef * curve_point_loss
         losses += args.topo_loss_coef * curve_patch_loss
         losses += args.topo_loss_coef * patch_close_loss
-
-        # if(rank >= 0):
-          # if(train_iter == 0): print("with patch corner correspondence loss")
         summary_loss_dict['patch_corner_topo'] += args.patch_corner_topo_loss_coef*patch_corner_matching_loss_topo.detach()
         if args.topo_acc:
           summary_loss_dict['patch_corner_topoacc'] += patch_corner_topo_acc.detach()
@@ -4235,65 +3988,10 @@ def get_val_summary_dict(model_shape, corner_loss_criterion, curve_loss_criterio
           summary_loss_dict['patch_close_loss'] += args.topo_loss_coef * patch_close_loss.detach()
 
     summary_loss_dict['total_loss'] += losses.detach()
-    
-    # now = datetime.now()
-    # print("{} sample:{}".format(now, sample_id))
-    # print(summary_loss_dict)
-    
-    # sample_name_list.append(sample_id)
-    # test_statistics.append(list(summary_loss_dict.values()))
-    
-    #train_summary = tf_summary_from_dict(summary_loss_dict, True)
-    #summary_writer.add_summary(tf.compat.v1.Summary(value=train_summary), train_iter)
-    
-    # reduce losses over all GPUs for logging purposes
-    # loss_dict_reduced = reduce_dict(corner_loss_dict)
-    # #loss_dict_reduced_unscaled = {f'{k}_unscaled': v for k, v in loss_dict_reduced.items()}
-    # loss_dict_reduced_scaled = {k: v * corner_weight_dict[k] for k, v in loss_dict_reduced.items() if k in corner_weight_dict}
-    # losses_reduced_scaled = sum(loss_dict_reduced_scaled.values())
-    # loss_value = losses_reduced_scaled.item()
-  
-    # if not math.isfinite(loss_value):
-    #     print("Corner Loss is {}, stopping training".format(loss_value))
-    #     print(loss_dict_reduced)
-    #     print(batch_sample_id)
-    #     sys.exit(1)
-    
-    # loss_dict_reduced = reduce_dict(curve_loss_dict)
-    # #loss_dict_reduced_unscaled = {f'{k}_unscaled': v for k, v in loss_dict_reduced.items()}
-    # loss_dict_reduced_scaled = {k: v * curve_weight_dict[k] for k, v in loss_dict_reduced.items() if k in curve_weight_dict}
-    # losses_reduced_scaled = sum(loss_dict_reduced_scaled.values())
-    # loss_value = losses_reduced_scaled.item()
-  
-    # if not math.isfinite(loss_value):
-    #     print("Loss is {}, stopping training".format(loss_value))
-    #     print(loss_dict_reduced)
-    #     print(batch_sample_id)
-    #     sys.exit(1)
   
   for k in summary_loss_dict:
     summary_loss_dict[k] = summary_loss_dict[k] / sample_count
-  # print(summary_loss_dict)
   return summary_loss_dict
-  # print(summary_loss_dict.keys())
-  # np.savetxt(os.path.join(obj_dir, "test_statistics.txt"), np.array(test_statistics))
-  # with open(os.path.join(obj_dir, "test_sample_name.txt"), "w") as wf:
-  #   for sample_name in sample_name_list:
-  #     wf.write("{}\n".format(sample_name))
-  # print(sample_count, "samples in test set")
-  
-  # import pandas as pd
-  # ## convert your array into a dataframe
-  # df = pd.DataFrame(np.array(test_statistics))
-  # df.columns = list(summary_loss_dict.keys())
-  # df.index = sample_name_list
-  # #title_row = pd.Series()
-  # #row_df = pd.DataFrame([title_row])
-  # #df = pd.concat([row_df, df], ignore_index=True)
-  
-  # ## save to xlsx file
-  # filepath = os.path.join(obj_dir, 'test_statistics.xlsx')
-  # df.to_excel(filepath, index=True)
 
 def get_val_summary_dict_backbone(encoderdecoder, val_data, device):
   encoderdecoder.eval()
@@ -4310,11 +4008,8 @@ def get_val_summary_dict_backbone(encoderdecoder, val_data, device):
     try:
       data_item = next(data_loader_iterator)
     except StopIteration:
-      #data_loader_iterator = iter(train_data)
-      #data_item = next(data_loader_iterator)
       break
     sample_count+=1
-    # print ("sample count: ", sample_count)
     locations = data_item[0].to(device)
     features = data_item[1].to(device)
     gt_loc = data_item[2].to(device)
@@ -4322,51 +4017,16 @@ def get_val_summary_dict_backbone(encoderdecoder, val_data, device):
     gt_pos = gt_loc[:,:3]
     gt_batch_idx = gt_loc[:,-1:]
     gt_loc = torch.cat([gt_batch_idx, gt_pos], dim = 1)
-
-    # dec_loc, dec_fea = encoderdecoder(locations, features)
     output = encoderdecoder(locations, features)
-    # dec_loc = output.C
-    # dec_fea = output.F
-    # losses = (features - dec_fea).square().sum(-1).mean()
-    # visualization 
-    # np.savetxt('input_fea.xyz', features[:,:6].detach().cpu().numpy())
-    # np.savetxt('output_fea.xyz', dec_fea[:,:6].detach().cpu().numpy())
-    # np.savetxt('input_pos.xyz', locations[:,:3].detach().cpu().numpy())
-    # np.savetxt('output_pos.xyz', dec_loc[:,1:].detach().cpu().numpy())
 
     gt_st = ME.SparseTensor(features=gt_fea, coordinates=gt_loc, coordinate_manager = output.coordinate_manager)
     fea_diff = (gt_st - output).F
-    
-    #output noise
-    # np.savetxt('input_fea.xyz', features[:,:6].detach().cpu().numpy())
-    # np.savetxt('input_gt_fea.xyz', gt_fea[:,:6].detach().cpu().numpy())
-    
     summary_loss_dict = {}
-    # summary_loss_dict['pos'] = (features - dec_fea)[:,:3].square().sum(-1).mean().detach()
     summary_loss_dict['pos'] = fea_diff[:,:3].square().sum(-1).mean().detach()
-
-    # losses = (features - dec_fea)[:,:3].square().sum(-1).mean() * w_pos
-    
     if args.input_normal_signals:
-      # summary_loss_dict['normal'] = (features - dec_fea)[:,3:6].square().sum(-1).mean().detach()
       summary_loss_dict['normal'] = fea_diff[:,3:6].square().sum(-1).mean().detach()
-
     summary_loss_dict['one'] = fea_diff[:,-1:].square().sum(-1).mean().detach()
     summary_loss_dict['total_noweight'] = fea_diff.square().sum(-1).mean().detach()
-
-    #ori version
-    
-    # # dec_loc, dec_fea = encoderdecoder(locations, features)
-    # output = encoderdecoder(locations, features)
-    # dec_loc = output.C
-    # dec_fea = output.F
-    # summary_loss_dict['pos'] += (features - dec_fea)[:,:3].square().sum(-1).mean().detach()
-    
-    # if args.input_normal_signals:
-    #   summary_loss_dict['normal'] += (features - dec_fea)[:,3:6].square().sum(-1).mean().detach()
-    # summary_loss_dict['one'] += (features - dec_fea)[:,6:].square().sum(-1).mean().detach()
-    # summary_loss_dict['total'] += (features - dec_fea).square().sum(-1).mean().detach()
-
   for k in summary_loss_dict:
     summary_loss_dict[k] = summary_loss_dict[k] / sample_count
   
@@ -4416,36 +4076,26 @@ def save_mesh_off(filename, vertices, faces, f_mask):
       f.write('255 255 255\n')
     else:
       f.write('{} {} {}\n'.format(colormap[f_mask[i]][0], colormap[f_mask[i]][1], colormap[f_mask[i]][2]))
-    # f.write('3 {} {} {}\n'.format(faces[i][0], faces[i][1], faces[i][2]))
 
 def export_patches_off(patch_points, export_off_filename):
   patch_points_reshape = np.reshape(patch_points, [-1, 3])
-  # assert(patch_points_reshape.shape[0] % 100 == 0)
   num_of_valid_patches = patch_points_reshape.shape[0] // (points_per_patch_dim * points_per_patch_dim)
-  # with open(export_obj_filename, "w") as wf:
-  #   wf.write("mtllib default.mtl\n")
-  #   num_mtl_in_lib = 15
   
   dim_square = (points_per_patch_dim * points_per_patch_dim)
   verts = []
   faces = []
   face_mask = []
   for patch_idx in range(num_of_valid_patches):
-    # wf.write("usemtl m{}\n".format(patch_idx % num_mtl_in_lib))
     for point in patch_points_reshape[dim_square*patch_idx:dim_square*patch_idx+dim_square]:
-      # wf.write("v %lf %lf %lf\n" %(point[0], point[1], point[2]))
       verts.append([point[0], point[1], point[2]])
-    # face_displacement = patch_idx*100 + 1
     face_displacement = patch_idx*dim_square
     for row_idx in range(points_per_patch_dim - 1):
       for col_idx in range(points_per_patch_dim):
         vert_idx = face_displacement + row_idx*points_per_patch_dim + col_idx
         if(col_idx != 0):
-          # wf.write("f %d %d %d\n" %(vert_idx, vert_idx-1, vert_idx+10))
           faces.append([vert_idx, vert_idx-1, vert_idx+points_per_patch_dim])
           face_mask.append(patch_idx)
         if(col_idx != points_per_patch_dim - 1):
-          # wf.write("f %d %d %d\n" %(vert_idx, vert_idx+10, vert_idx+11))  
           faces.append([vert_idx, vert_idx+points_per_patch_dim, vert_idx+points_per_patch_dim + 1])
           face_mask.append(patch_idx)
   
@@ -4456,7 +4106,6 @@ def export_patches_off(patch_points, export_off_filename):
 
 
 def eval_pipeline(flag_eval = True):  
-  # fix the seed for reproducibility
   '''
   seed = args.seed + rank
   torch.manual_seed(seed)
@@ -4484,11 +4133,8 @@ def eval_pipeline(flag_eval = True):
   device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
   disable_aux_loss_output = True
   tf.compat.v1.disable_eager_execution()
-  
   model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model_tripath(device, flag_eval)
-
   model_without_ddp = model_shape
-  
   param_dicts = [{"params": [p for n, p in model_without_ddp.named_parameters() if p.requires_grad]}]
   
   corner_topo_params = {n:p for n, p in model_without_ddp.named_parameters() if p.requires_grad and 'corner_model.corner_topo_embed' in n}
@@ -4558,7 +4204,6 @@ def eval_pipeline(flag_eval = True):
     return model_evaluation(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output, test_folder = test_folder)
   elif args.evalfinal:
     return model_evaluation_json(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output)
-
   elif args.evaltopo:
     return model_evaluation_complex(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output)
 
