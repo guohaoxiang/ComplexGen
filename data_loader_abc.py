@@ -1,6 +1,5 @@
 import numpy as np
 import numba
-#import scipy.io as sio
 import os
 import torch
 
@@ -9,31 +8,20 @@ from scipy.spatial.transform import Rotation as R
 from scipy.spatial import cKDTree as KDTree
 import pickle
 import random
-
 import copy
-
 from numpy import linalg
 from methodtools import lru_cache
-
 from torch.utils.data.distributed import DistributedSampler
-
 import MinkowskiEngine as ME
-
-
 average_patch_area = 0
 average_squared_curve_length = 0
 pack_size = 10000
 th_norm = 1e-6
-# pack_size = 10
-
-#set as default tmply
-# points_per_patch_dim = 10
 points_per_curve_dim = 34
 
 def pack_pickle_files(data_folder, packed_data_folder):
   print("load data from {} and packing data to {}".format(data_folder, packed_data_folder))
   files = os.listdir(data_folder)
-  #add on 0425, shuffle data
   random.shuffle(files)
   file_count = 0
   for file in files:
@@ -52,7 +40,6 @@ def pack_pickle_files(data_folder, packed_data_folder):
     packed_file.close()
           
 def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
-  #points are normalized to unit sphere
   def normalize_model(points_with_normal, to_unit_sphere=True):
     assert(len(points_with_normal.shape) == 2 and points_with_normal.shape[1] == 6)
     points = points_with_normal[:,:3]
@@ -65,11 +52,8 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
     normalized_points = points - center
     if(to_unit_sphere):
       scale = math.sqrt(np.square(normalized_points).sum(-1).max())*2
-    
     # normalized_points *= 0.95/scale
     normalized_points *= 1.0/scale
-
-    # return np.concatenate([normalized_points, normal], axis=1), -center, 0.95/scale
     return np.concatenate([normalized_points, normal], axis=1), -center, 1.0/scale
   
   def curve_type_to_id(str):
@@ -85,7 +69,7 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
   
   def patch_type_to_id(str):
     #Cylinder, Torus, BSpline, Plane, Cone, Sphere
-    #update 1011, add Extrusion and Revolution, label same as BSpline
+    #update: add Extrusion and Revolution, label same as BSpline
     if(str == 'Cylinder'):
       return 0
     if(str == 'Torus'):
@@ -109,9 +93,7 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
   min_number_of_curves = 1000
   min_number_points_in_patch = 10000
   max_number_points_in_patch = 0
-  
   open_shape_counter = 0
-  
   sample_list = []
   print("load data from {}".format(data_folder))
   if(os.path.exists(os.path.join(data_folder, "packed"))):
@@ -120,7 +102,6 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
     data_folder = os.path.join(data_folder, "packed")
   else:
     read_from_packed_pkl = False
-  
   curve_length_stat = []
   patch_area_stat = []
   
@@ -132,30 +113,20 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
     while(True):
       #load data from pkl file
       try:
-        #for testing
         sample = pickle.load(rf)
       except EOFError:
         break
       if(read_from_packed_pkl):
         file = sample['filename']
       file_count += 1
-      #get corner and curves of sample
       processed_sample = {}
-      
-      #not normalized since 1129, not processed for partial data
-      # processed_sample['surface_points'], translation, scale = normalize_model(sample['surface_points'],to_unit_sphere=False)
       processed_sample['surface_points'] = sample['surface_points']
       scale = 1.0
       translation = np.zeros(3)
-      
       try:
         assert(np.square(translation).sum() < 2e-6)
       except:
         print("np.square(translation).sum() = ", np.square(translation).sum())
-      # print('load file:', file)
-      # print('min: {} max: {}'.format(processed_sample['surface_points'][:,:3].min(), processed_sample['surface_points'][:,:3].max()))
-      
-      #out of bounds continue, 1129
       if processed_sample['surface_points'][:,:3].min() < -0.55 or processed_sample['surface_points'][:,:3].max() > 0.55:
         print('point cloud out of bound for model: ', file)
         continue
@@ -177,9 +148,7 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
       short_curves = False
       for curve_idx, curve in enumerate(sample['curves']):
         processed_curve = {}
-        #'points', 'type', 'is_closed', 'inside_patch', 'start_vert_idx', 'end_vert_idx'
         processed_curve['points'] = scale * (curve['points'] + translation)
-        #for testing 
         if (processed_curve['points'].min() < -0.55 or processed_curve['points'].max() > 0.55):
           print('min v: ', processed_curve['points'].min())
           print('max v: ', processed_curve['points'].max())
@@ -187,7 +156,6 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
 
         assert(processed_curve['points'].min() > -0.55 and processed_curve['points'].max() < 0.55)
         processed_curve['is_closed'] = curve['is_closed']
-        #connection between curves and corners
         if(not curve['is_closed']):
           if(not curve['start_vert_idx'] in corner_vert_idx):
             corner_vert_idx.append(curve['start_vert_idx'])
@@ -208,7 +176,7 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
         processed_sample['curves'].append(processed_curve)
       if(short_curves):
         print("short curves detected in", file)
-        continue #comment on 1119
+        continue
       processed_sample['corners'] = np.array(corner_position)
       total_valid_corners += len(processed_sample['corners'])
       total_valid_curves += len(processed_sample['curves'])
@@ -216,9 +184,7 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
       if(processed_sample['corners'].shape[0] > max_number_of_corners):
         max_number_of_corners = processed_sample['corners'].shape[0]
       if(processed_sample['corners'].shape[0] == 0):
-        #print("0 corners in {}".format(file))
         processed_sample['corners'] = np.zeros([0,3], dtype=np.float32)
-      
       
       curve_occur_dict = {}
       total_patches += len(sample['patches'])
@@ -249,7 +215,6 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
       
       for item in curve_occur_dict:
         if(curve_occur_dict[item] != 2):
-          #print("detected curve connect {} patches".format(curve_occur_dict[item]))
           open_shape_counter += 1
           break
       
@@ -262,7 +227,6 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
       processed_sample['filename'] = file
       sample_list.append(processed_sample)
     rf.close()
-  #print(total_curves, "curves total") #inside_patch_curves, "inside patch curves and ", degree1_BSpline, "degree 1 BSplines"
   print("Successfully Loaded from {} files:{}".format(file_count, len(sample_list)))
   print("max number of corners in single sample: {}".format(max_number_of_corners))
   print(min_number_of_curves, "curves at least")
@@ -272,8 +236,6 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
   print("min and max points in single patch: {} {}".format(min_number_points_in_patch, max_number_points_in_patch))
   curve_length_stat = np.square(np.array(curve_length_stat))
   print("{} open shapes".format(open_shape_counter))
-  #a=np.sort(curve_length_stat)
-  #print(a[:100])
   patch_area_stat = np.array(patch_area_stat)
   print("squared curve length statistics:", len(curve_length_stat), curve_length_stat.min(), curve_length_stat.max(), curve_length_stat.mean())
   print("patch area statistics:", len(patch_area_stat), patch_area_stat.min(), patch_area_stat.max(), patch_area_stat.mean())
@@ -287,24 +249,17 @@ def data_loader_ABC(data_folder, ignore_inpatch_curves=True):
 def points2sparse_voxel(points_with_normal, voxel_dim, feature_type, with_normal, pad1s):
     #covert to COO format, assume input points is already normalize to [-0.5 0.5]
     points = points_with_normal[:,:3] + 0.5
-    # assert(points.min() >= -0.1)
     voxel_dict = {}
     voxel_length = 1.0 / voxel_dim
     voxel_coord = np.clip(np.floor(points / voxel_length).astype(np.int32), 0, voxel_dim-1)
-    
-    # assert(feature_type == 'global' or feature_type == 'local' or feature_type == 'occupancy')
-    
     points_normal_norm = linalg.norm(points_with_normal[:,3:], axis=1, keepdims=True)
     points_normal_norm[points_normal_norm < th_norm] = th_norm
     if(feature_type == 'local'):
       local_coord = (points - voxel_coord.astype(np.float32)*voxel_length)*voxel_dim - 0.5
-      # assert(local_coord.min() >= -0.55 and local_coord.max() <= 0.55)
       local_coord = np.concatenate([local_coord, points_with_normal[:,3:] / points_normal_norm, np.ones([local_coord.shape[0], 1])], axis=-1)
     elif(feature_type == 'global'):
       local_coord = points - 0.5
       local_coord = np.concatenate([local_coord, points_with_normal[:,3:] / points_normal_norm, np.ones([local_coord.shape[0], 1])], axis=-1)
-    # else:
-    #   raise NotImplementedError
     
     stat_voxel_dict = {}
     
@@ -312,24 +267,16 @@ def points2sparse_voxel(points_with_normal, voxel_dim, feature_type, with_normal
       coord_tuple = (voxel_coord[i,0], voxel_coord[i,1], voxel_coord[i,2])
       if(coord_tuple not in voxel_dict):
         voxel_dict[coord_tuple] = local_coord[i]
-        #stat_voxel_dict[coord_tuple] = [local_coord[i]+0]
       else:
         voxel_dict[coord_tuple] += local_coord[i]
-        #stat_voxel_dict[coord_tuple].append(local_coord[i])
     
     locations = np.array(list(voxel_dict.keys()))
     features = np.array(list(voxel_dict.values()))
     points_in_voxel = features[:,6:]
-    # print(points_in_voxel.(), "points in a single voxel")
-    # print('voxel points count min {}  max {} mean {}'.format(points_in_voxel.min(), points_in_voxel.max(),points_in_voxel.mean()))
-    
     features = features / points_in_voxel #pad ones
     position = features[:,:3]
     normals = features[:,3:6]
     pad_ones = features[:,6:]
-    
-    #print(linalg.norm(normals, axis=-1, keepdims=True).min())
-    #normalize normal
     normals /= linalg.norm(normals, axis=-1, keepdims=True) + 1e-10
     
     '''
@@ -381,8 +328,6 @@ def points2sparse_voxel_mink(points_with_normal, voxel_dim, feature_type, with_n
       coordinates=ME.utils.batched_coordinates([coords / voxel_size]),  # coordinates must be defined in a integer grid. If the scale
       quantization_mode=ME.SparseTensorQuantizationMode.UNWEIGHTED_AVERAGE  # when used with continuous coordinates, average features in the same coordinate
     ).detach()
-
-    # return sinput.coordinates_at(0), sinput.features_at(0)
     return sinput.coordinates_at(0).numpy().astype(np.int32), sinput.features_at(0).numpy().astype(np.float32)
 
 
@@ -405,10 +350,6 @@ r_normal_noise = 0.2
 class ABCDataset(torch.utils.data.Dataset):
     def __init__(self, data, voxel_dim, feature_type='local', pad1s=True, random_rotation=False, random_angle = False, with_normal=True, flag_quick_test = False, flag_noise = 0, flag_grid = False, num_angles = 4, flag_patch_uv = False, flag_backbone = False, dim_grid = 10, eval_res_cov = False):
         self.data = data
-        
-        #training on first 2 samples
-        #self.data = self.data[:2]
-        
         self.voxel_dim = voxel_dim
         self.feature_type = feature_type
         assert(self.feature_type == 'global' or self.feature_type == 'local' or self.feature_type == 'occupancy')
@@ -428,28 +369,18 @@ class ABCDataset(torch.utils.data.Dataset):
         self.fourteen_mat = []
         for i in range(4):
           self.fourteen_mat.append(R.from_rotvec(np.pi/2 * i * np.array([0,1,0])).as_matrix())
-        
         self.fourteen_mat.append(R.from_rotvec(np.pi/2 * 1 * np.array([1,0,0])).as_matrix())
         self.fourteen_mat.append(R.from_rotvec(np.pi/2 * 3 * np.array([1,0,0])).as_matrix())
-
         c = np.sqrt(3)/3
         s = -np.sqrt(6)/3
         cornerrot1 = np.array([[c,0,-s],[0,1,0],[s,0,c]])
         for i in range(4):
           self.fourteen_mat.append( np.matmul(R.from_rotvec((np.pi/2 * i + np.pi / 4) * np.array([0,0,1])).as_matrix(), cornerrot1).transpose() )
         
-        # s = np.sqrt(6)/3
         c = -np.sqrt(3)/3
         cornerrot2 = np.array([[c,0,-s],[0,1,0],[s,0,c]])
         for i in range(4):
           self.fourteen_mat.append( np.matmul(R.from_rotvec((np.pi/2 * i + np.pi / 4) * np.array([0,0,1])).as_matrix(), cornerrot2).transpose() )
-
-        #z dir, test code below, now testing
-        # z = np.array([0,0,1])
-        # for i in range(14):
-        #   print('i: ', np.matmul(z, self.fourteen_mat[i]))
-
-
         if(self.with_normal): print("normal is included in input signal")
         
         '''
@@ -464,8 +395,6 @@ class ABCDataset(torch.utils.data.Dataset):
           assert(covariance.shape[0] == surface_points.shape[0])
           self.data[i]['covariance'] = covariance
         '''
-        #self.preprocess_data()
-    
     #not used
     def preprocess_data(self):
         self.processed_data = []
@@ -491,86 +420,10 @@ class ABCDataset(torch.utils.data.Dataset):
     #only worked when no rotation augmentation is used
     # @lru_cache(maxsize=None)
     def __getitem__(self, idx):
-        # @numba.jit()        
-        # def points2sparse_voxel(points_with_normal, voxel_dim, feature_type, with_normal, pad1s):
-        #     #covert to COO format, assume input points is already normalize to [-0.5 0.5]
-        #     points = points_with_normal[:,:3] + 0.5
-        #     # assert(points.min() >= -0.1)
-        #     voxel_dict = {}
-        #     voxel_length = 1.0 / voxel_dim
-        #     voxel_coord = np.clip(np.floor(points / voxel_length).astype(np.int32), 0, voxel_dim-1)
-            
-        #     # assert(feature_type == 'global' or feature_type == 'local' or feature_type == 'occupancy')
-            
-        #     if(feature_type == 'local'):
-        #       local_coord = (points - voxel_coord.astype(np.float32)*voxel_length)*voxel_dim - 0.5
-        #       # assert(local_coord.min() >= -0.55 and local_coord.max() <= 0.55)
-        #       local_coord = np.concatenate([local_coord, points_with_normal[:,3:] / linalg.norm(points_with_normal[:,3:], axis=1, keepdims=True), np.ones([local_coord.shape[0], 1])], axis=-1)
-        #     elif(feature_type == 'global'):
-        #       local_coord = points - 0.5
-        #       local_coord = np.concatenate([local_coord, points_with_normal[:,3:] / linalg.norm(points_with_normal[:,3:], axis=1, keepdims=True), np.ones([local_coord.shape[0], 1])], axis=-1)
-        #     # else:
-        #     #   raise NotImplementedError
-            
-        #     stat_voxel_dict = {}
-            
-        #     for i in range(voxel_coord.shape[0]):
-        #       coord_tuple = (voxel_coord[i,0], voxel_coord[i,1], voxel_coord[i,2])
-        #       if(coord_tuple not in voxel_dict):
-        #         voxel_dict[coord_tuple] = local_coord[i]
-        #         #stat_voxel_dict[coord_tuple] = [local_coord[i]+0]
-        #       else:
-        #         voxel_dict[coord_tuple] += local_coord[i]
-        #         #stat_voxel_dict[coord_tuple].append(local_coord[i])
-            
-        #     locations = np.array(list(voxel_dict.keys()))
-        #     features = np.array(list(voxel_dict.values()))
-        #     points_in_voxel = features[:,6:]
-        #     #print(points_in_voxel.max(), "points in a single voxel")
-            
-        #     features = features / points_in_voxel #pad ones
-        #     position = features[:,:3]
-        #     normals = features[:,3:6]
-        #     pad_ones = features[:,6:]
-            
-        #     #print(linalg.norm(normals, axis=-1, keepdims=True).min())
-        #     #normalize normal
-        #     normals /= linalg.norm(normals, axis=-1, keepdims=True) + 1e-10
-            
-        #     '''
-        #     max_variance = 0
-        #     max_variance_signals = None
-        #     #do the statistics
-        #     for item in stat_voxel_dict:
-        #       if(len(stat_voxel_dict[item]) == 1): continue
-        #       mean_normal = voxel_dict[item][3:6]
-        #       mean_normal /= linalg.norm(mean_normal)
-        #       voxel_normals = np.stack(stat_voxel_dict[item], axis=0)[:,3:6]
-        #       voxel_normals /= linalg.norm(voxel_normals, axis=1, keepdims=True)
-        #       diff = np.square(voxel_normals - np.reshape(mean_normal, [-1, 3])).sum(-1).mean()
-        #       if(diff > max_variance):
-        #         max_variance = diff
-        #         max_variance_signals = stat_voxel_dict[item]
-            
-        #     print("max variance voxel {} {}".format(max_variance, max_variance_signals))
-        #     '''
-        #     if(self.with_normal and self.pad1s):
-        #       features = np.concatenate([position, normals, pad_ones], axis=1)
-        #     elif(self.pad1s):
-        #       features = np.concatenate([position, pad_ones], axis=1)
-        #     elif(self.with_normal):
-        #       features = np.concatenate([position, normals], axis=1)
-        #     else:
-        #       features = position
-                        
-        #     return locations.astype(np.int32), features.astype(np.float32)
-        
-        # print('id:', idx)
         sample_data = self.data[idx % len(self.data)]
         item_points = sample_data['surface_points'].astype(np.float32) #nx6
         if self.flag_backbone:
           item_points_ori = np.copy(item_points)
-        
         corners = sample_data['corners']
         curves = copy.deepcopy(sample_data['curves'])
 
@@ -582,14 +435,9 @@ class ABCDataset(torch.utils.data.Dataset):
             # print('noise level 2')
           elif self.flag_noise == 3:
             sigma = 0.05 
-            
 
           clip= 5.0 * sigma
-          #update 1011, smaller noise
-          # sigma=0.001 
-          # clip=0.005
           jittered_data_pts = np.clip(sigma * np.random.randn(item_points.shape[0],3), -1 * clip, clip)
-          # np.savetxt("beforejitter.xyz", item_points)
           item_points[:,:3] = item_points[:,:3] + jittered_data_pts
 
           if flag_normal_noise:
@@ -602,54 +450,31 @@ class ABCDataset(torch.utils.data.Dataset):
             new_normal_norm[new_normal_norm < th_norm] = th_norm
             item_points[:, 3:] = new_normal / new_normal_norm
 
-          # np.savetxt("afterjitter.xyz", item_points)
-          # for curve in curves:
-          #   curve['points'] = curve['points'] + np.clip(sigma * np.random.randn(curve['points'].shape[0],3), -1 * clip, clip)
-
         patches = copy.deepcopy(sample_data['patches'])
         if self.eval_res_cov:
           for patch_idx in range(len(patches)):
             tmp_patch_pc = patches[patch_idx]['patch_points'].reshape(-1, 6)[:, :3].astype(np.float32) #not using normal
-            # tmp_patch_pc = np.dot(tmp_patch_pc, rot)
             patches[patch_idx]['patch_pc'] = tmp_patch_pc
 
         if(self.random_rotation_augmentation):
-          #apply random rotation
-          #modified here, only rotate angles same
-          # rot = R.random().as_matrix()
-          
-          #modified on 3302021, rotate n * 90
           if not self.random_angle:
-            #90 version
-
-            # rot_x = R.from_rotvec(np.pi/2 * random.randint(0,3) * np.array([1,0,0])).as_matrix()
-            # rot_y = R.from_rotvec(np.pi/2 * random.randint(0,3) * np.array([0,1,0])).as_matrix()
-            # rot_z = R.from_rotvec(np.pi/2 * random.randint(0,3) * np.array([0,0,1])).as_matrix()
-            # rot = np.matmul(np.matmul(rot_x, rot_y), rot_z)
-            
-            
             if self.num_angles == 4:
               rot_z = R.from_rotvec(np.pi/2 * random.randint(0,3) * np.array([0,0,1])).as_matrix()
               rot = rot_z
             elif self.num_angles == 56:
-              #random select 1 of the 14 angle, modified on 07022021
               rot = self.fourteen_mat[random.randint(0,13)]
               rot_z = R.from_rotvec(np.pi/2 * random.randint(0,3) * np.array([0,0,1])).as_matrix()
               rot = np.matmul(rot_z, rot)
             elif self.num_angles == 14:
               rot = self.fourteen_mat[random.randint(0,13)]
             elif self.num_angles == -1:
-              #rot random angle along z axis
               rotation_angle = np.random.uniform() * 2 * np.pi
               cosval = np.cos(rotation_angle)
               sinval = np.sin(rotation_angle)
               rot = np.array([[cosval, 0, sinval],
                                     [0, 1, 0],
                                     [-sinval, 0, cosval]])
-            
-            # rot_x = R.from_rotvec(np.pi/2 * random.randint(0,3) * np.array([1,0,0])).as_matrix()
           else:
-            # rot = R.from_rotvec( np.array([np.pi/2 * random.randint(0,3), np.pi/2 * random.randint(0,3), np.pi/2 * random.randint(0,3)])).as_matrix()
             rot = R.random().as_matrix()
 
           item_points = np.reshape(item_points, [-1,3])
@@ -666,17 +491,11 @@ class ABCDataset(torch.utils.data.Dataset):
           if self.flag_grid:
             for patch_idx in range(len(patches)):
               tmp_patchnormal = patches[patch_idx]['grid_normal'].reshape(-1,3)
-              # tmp_patchnormal = np.matmul(tmp_patchnormal, rot)
               tmp_patchnormal = np.dot(tmp_patchnormal, rot)
               patches[patch_idx]['grid_normal'] = tmp_patchnormal.reshape(-1,6).astype(np.float32)
-              # print('dtype: ', patches[patch_idx]['grid_normal'].dtype)
-          
-          # print('!!!!!!!!!!!!!!!!!!eval res cov: ', self.eval_res_cov)
           
           if self.eval_res_cov:
             for patch_idx in range(len(patches)):
-              # tmp_patch_pc = patches[patch_idx]['patch_points'].reshape(-1, 6)[:, :3].astype(np.float32) #not using normal
-              # tmp_patch_pc = np.dot(tmp_patch_pc, rot)
               patches[patch_idx]['patch_pc'] = np.dot(patches[patch_idx]['patch_pc'], rot).astype(np.float32)
                         
         if not self.flag_grid:
@@ -686,19 +505,14 @@ class ABCDataset(torch.utils.data.Dataset):
             assert(len(patches[patch_idx]['patch_points'].shape) == 2 and patches[patch_idx]['patch_points'].shape[1] == 6)
             
             patches[patch_idx]['patch_normals'] = patches[patch_idx]['patch_points'][:,3:].astype(np.float32)
-            #modified 0705, normalized
             patch_normal_norm = np.linalg.norm(patches[patch_idx]['patch_normals'], axis = -1).reshape(-1,1)
             patch_normal_norm[patch_normal_norm < th_norm] = th_norm
             patches[patch_idx]['patch_normals'] = patches[patch_idx]['patch_normals']/ patch_normal_norm
 
             patches[patch_idx]['patch_points'] = patches[patch_idx]['patch_points'][:,:3].astype(np.float32)
-            # patches[patch_idx]['patch_points'] = patches[patch_idx]['patch_points'][:,].astype(np.float32)
         else:
           #rotation
           for patch_idx in range(len(patches)):
-            # patches[patch_idx]['patch_points'] = np.dot(patches[patch_idx]['grid_normal'][:,:3].astype(np.float32), rot)
-            # patches[patch_idx]['patch_normals'] = np.dot(patches[patch_idx]['grid_normal'][:,3:].astype(np.float32), rot)
-            
             if len(patches[patch_idx]['grid_normal']) == self.dim_grid * self.dim_grid:
               patches[patch_idx]['patch_points'] = patches[patch_idx]['grid_normal'][:,:3].astype(np.float32)
               patches[patch_idx]['patch_normals'] = patches[patch_idx]['grid_normal'][:,3:].astype(np.float32)
@@ -709,27 +523,7 @@ class ABCDataset(torch.utils.data.Dataset):
               assert(len(tmp) == 100)
               patches[patch_idx]['patch_points'] = tmp[:,:3]
               patches[patch_idx]['patch_normals'] = tmp[:,3:]
-            # assert(patches[patch_idx]['patch_points'].shape[0] == )
-            # patches[patch_idx]['patch_points'] = patches[patch_idx]['patch_points'][:,].astype(np.float32)
-        # print('patch normals: ', patches[0]['patch_normals'].shape)
-
-        #vis for testing
-        # all_patch_pts = []
-        # for patch_idx in range(len(patches)):
-        #   all_patch_pts.append(patches[patch_idx]['grid_normal'])
-        # all_patch_pts = np.concatenate(all_patch_pts)  
-        
-        # all_curve_pts = []
-        # for curve in curves:
-        #   all_curve_pts.append(curve['points'])
-        # all_curve_pts = np.concatenate(all_curve_pts)
-        # np.savetxt('allpatch.xyz', all_patch_pts)
-        # np.savetxt('allcurve.xyz', all_curve_pts)
-        # np.savetxt('input.xyz', item_points)
-        
         locations, features = points2sparse_voxel(item_points, self.voxel_dim, self.feature_type, self.with_normal, self.pad1s)
-        # locations, features = points2sparse_voxel_mink(item_points, self.voxel_dim, self.feature_type, self.with_normal, self.pad1s) #slow in forwarding, 1009
-        # print('type location: {} device location: {}'.format(type(locations), locations.device))
         if self.flag_backbone:
           locations_ori, features_ori = points2sparse_voxel(item_points_ori, self.voxel_dim, self.feature_type, self.with_normal, self.pad1s)
           return (locations, features, locations_ori, features_ori, sample_data['filename'])
@@ -754,13 +548,9 @@ def train_data_loader(batch_size=32, voxel_dim=128, feature_type='local', pad1s=
       endpoints = [curve['endpoints'] for curve in curves]
       curve_length = [(curve['curve_length']**2) / average_squared_curve_length if (curve['curve_length']**2) / average_squared_curve_length > 0.001 else 0.001 for curve in curves]
       result['labels'] = torch.from_numpy(np.array(labels, dtype=np.int64))#.to(device)
-      # result['labels'] = torch.from_numpy(np.array(labels, dtype=np.int64))#.to(device)
-
       curve_points = torch.from_numpy(np.concatenate(geometry, axis=0).astype(np.float32))#.to(device) 
-
       if curve_points.shape[1] != points_per_curve_dim:
         curve_points = curve_points[:, ::3] #sample 34 points
-
       result['curve_points'] = curve_points
       result['is_closed'] = torch.from_numpy(np.array(is_closed, dtype=np.int64))#.to(device)
       result['endpoints'] = torch.from_numpy(np.array(endpoints, dtype=np.int64))#.to(device)
@@ -777,7 +567,6 @@ def train_data_loader(batch_size=32, voxel_dim=128, feature_type='local', pad1s=
   def pack_patch_list(patches, n_curves):
     assert(len(patches) > 0)
     labels = torch.from_numpy(np.array([patch['type'] for patch in patches], dtype=np.int64))#.to(device)
-    # if not flag_grid:
     geometry = [torch.from_numpy(patch['patch_points']) for patch in patches] #.to(device)
     normals = [torch.from_numpy(patch['patch_normals']) for patch in patches] #.to(device)
     patch_area = [patch['patch_area'] / average_patch_area if patch['patch_area'] / average_patch_area > 0.001 else 0.001 for patch in patches]
@@ -809,8 +598,6 @@ def train_data_loader(batch_size=32, voxel_dim=128, feature_type='local', pad1s=
     #first call __getitem__ then this function
     batch_size = len(tensorlist)
     locations = [np.concatenate([tensorlist[i][0], np.ones([tensorlist[i][0].shape[0], 1], dtype=np.int32)*i], axis=-1) for i in range(batch_size)]
-    # locations = [np.concatenate([tensorlist[i][0], np.ones([tensorlist[i][0].shape[0], 1], dtype=np.float32)*i], axis=-1) for i in range(batch_size)]
-
     features = [tensorlist[i][1] for i in range(batch_size)]
     if flag_backbone:
       locations_ori = [np.concatenate([tensorlist[i][2], np.ones([tensorlist[i][2].shape[0], 1], dtype=np.int32)*i], axis=-1) for i in range(batch_size)]
@@ -819,10 +606,8 @@ def train_data_loader(batch_size=32, voxel_dim=128, feature_type='local', pad1s=
       return torch.from_numpy(np.concatenate(locations, axis=0)), torch.from_numpy(np.concatenate(features, axis=0)),\
       torch.from_numpy(np.concatenate(locations_ori, axis=0)), torch.from_numpy(np.concatenate(features_ori, axis=0)),input_sample_idx
 
-
     corner_points = [np.reshape(tensorlist[i][2], [-1,3]) for i in range(batch_size)]
     corner_batch_idx = [np.ones(tensorlist[i][2].shape[0], dtype=np.int32)*i for i in range(batch_size)]
-    #reorganize curves
     curves = [pack_curve_list(tensorlist[i][3]) for i in range(batch_size)]
     patches = [pack_patch_list(tensorlist[i][4], len(tensorlist[i][3])) for i in range(batch_size)]
     input_sample_idx = [tensorlist[i][5] for i in range(batch_size)]
@@ -839,12 +624,9 @@ def train_data_loader(batch_size=32, voxel_dim=128, feature_type='local', pad1s=
   train_dataset = ABCDataset(data_loader_ABC(data_folder), voxel_dim, feature_type=feature_type, pad1s=pad1s, random_rotation=rotation_augmentation, random_angle = random_angle, with_normal=with_normal, flag_quick_test=flag_quick_test, flag_noise=flag_noise, flag_grid = flag_grid, num_angles = num_angle, flag_patch_uv = flag_patch_uv, flag_backbone = flag_backbone, dim_grid = dim_grid, eval_res_cov=eval_res_cov)
   if(with_distribute_sampler): #train mode true
     train_sampler = DistributedSampler(train_dataset)
-    #shuffle=True, num_workers=2, 
     train_data = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, collate_fn=collate_function, drop_last=True, sampler=train_sampler)
     return train_data, train_sampler
   else:
-    # train_data = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, collate_fn=collate_function, drop_last=True, shuffle=True, num_workers=4)
     train_data = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, collate_fn=collate_function, drop_last=True, shuffle=False, num_workers=4)
-    # train_data = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, collate_fn=collate_function, drop_last=True, shuffle=False)
     return train_data
     
