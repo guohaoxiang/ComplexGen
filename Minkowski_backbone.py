@@ -56,7 +56,6 @@ def get_args_parser():
     parser.add_argument('--pe_sin_base', default=1.2, type=float)
     parser.add_argument('--no_pe', action = 'store_true', help = 'not using positional encoding')
     parser.add_argument('--spe', action = 'store_true', help = 'simple positional encoding')
-    # parser.add_argument('--patch_normal', default=1.2, type=float)
     parser.add_argument('--patch_normal', action = 'store_true', help = 'add tangent normal constraints for patch')
     parser.add_argument('--patch_lap', action = 'store_true', help = 'add laplacian constraints for patch')
     parser.add_argument('--patch_lapboundary', action = 'store_true', help = 'add boundary laplacian constraints for patch')
@@ -102,20 +101,14 @@ def get_args_parser():
     parser.add_argument('--evalfinal', action='store_true')
     parser.add_argument('--evaltopo', action='store_true')
     parser.add_argument('--fittingonce', action='store_true')
-    
     parser.add_argument('--dropout', default=0.0, type=float,
                         help="Dropout applied in the transformer")
     parser.add_argument('--nheads', default=8, type=int,
                         help="Number of attention heads inside the transformer's attentions")
-
     parser.add_argument('--num_corner_queries', default=100, type=int,help="Number of corner query slots")
-
     parser.add_argument('--num_curve_queries', default=150, type=int,help="Number of curve query slots")
-
     parser.add_argument('--num_patch_queries', default=100, type=int,help="Number of patch query slots")
-
     parser.add_argument('--pre_norm', action='store_false') #true
-    
     parser.add_argument('--position_embedding', default='sine', type=str, choices=('sine', 'learned'),
                         help="Type of positional embedding to use on top of the image features")
     
@@ -300,11 +293,9 @@ def get_patch_mesh_pts_faces(pts, dimu, dimv, uclose, begin_id = 0, flag_extend 
   else:
     pts_new = []
     #update u v
-    # if uclose:
     pts = pts.reshape(dimu, dimv, 3)
     uneg_dir = pts[:,1] - pts[:,0]
     uneg_dir = normalized(uneg_dir)
-    # print('uneg dir: ', uneg_dir)
     uneg = pts[:, 0] - uneg_dir * extend_offset
     upos_dir = pts[:,-1] - pts[:,-2]
     upos_dir = normalized(upos_dir)
@@ -341,12 +332,9 @@ def get_patch_mesh_pts_faces(pts, dimu, dimv, uclose, begin_id = 0, flag_extend 
       uneg = uneg.reshape(dimu, 1, 3)
       upos = upos.reshape(dimu, 1, 3)
       middle = np.concatenate([uneg, pts, upos], axis = 1)
-      # dimv += 2
-      # pts_new = pts_new.reshape(-1, 3)
       vneg = np.concatenate([unegneg.reshape(1,-1), vneg, uposneg.reshape(1,-1)]).reshape(1, -1, 3)
       vpos = np.concatenate([unegpos.reshape(1,-1), vpos, upospos.reshape(1,-1)]).reshape(1,-1,3)
       pts_new = np.concatenate([vneg, middle, vpos], axis = 0)
-
       dimv += 2
       dimu += 2
       pts_new = pts_new.reshape(-1,3)
@@ -375,41 +363,28 @@ def compute_overall_singlecd(patch_grids, patch_uclosed, input_pointcloud, match
   vert_id = 0
   all_faces = []
   all_pts = []
-  # print('effective psize: ', effective_patch_points.shape)
-  # print('patch close: ', patch_uclosed)
   assert(patch_grids.shape[0] == patch_uclosed.shape[0])
-  # print('grid shape: ', patch_grids.shape[0]) #slightly for topo results and prediction results, because of the threshold setting.
-  
-  #replace to filtered id since 0122
   set_match_id = set(matching_indices['indices'][0][0].tolist())
-  #pred version
   all_pts_matched = []
   all_faces_matched = []
   vert_id_matched = 0
   for i in range(len(patch_grids)):
-    # faces = get_patch_mesh_faces(points_per_patch_dim, points_per_patch_dim, patch_uclosed[i], vert_id)
-    # faces = get_patch_mesh_faces(points_per_patch_dim, points_per_patch_dim, patch_uclosed[i], vert_id)
     pts, faces = get_patch_mesh_pts_faces(patch_grids[i], points_per_patch_dim, points_per_patch_dim, patch_uclosed[i], vert_id, True, 0.05)
     all_faces.append(faces)
-    # vert_id += points_per_patch_dim * points_per_patch_dim
     vert_id += pts.shape[0]
     all_pts.append(pts)
     if args.eval_matched and i in set_match_id:
       pts, faces = get_patch_mesh_pts_faces(patch_grids[i], points_per_patch_dim, points_per_patch_dim, patch_uclosed[i], vert_id_matched, True, 0.05)
       all_faces_matched.append(faces)
-      # vert_id += points_per_patch_dim * points_per_patch_dim
       vert_id_matched += pts.shape[0]
       all_pts_matched.append(pts)
   
-  # all_faces = np.array(all_faces).reshape(-1, 3)
   all_faces = np.concatenate(all_faces)
   all_pts = np.concatenate(all_pts)
   
   mesh = trimesh.Trimesh(vertices = all_pts, faces = all_faces)
-  # mesh.export('allpatch.obj')
 
   (closest_points,distances,triangle_id) = mesh.nearest.on_surface(input_pointcloud[:,:3])
-  #return single_cd, pcov001, pcov002
   if not args.eval_matched:
     return distances
   else:
@@ -424,38 +399,26 @@ def compute_overall_singlecd(patch_grids, patch_uclosed, input_pointcloud, patch
   vert_id = 0
   all_faces = []
   all_pts = []
-  # print('effective psize: ', effective_patch_points.shape)
-  # print('patch close: ', patch_uclosed)
   assert(patch_grids.shape[0] == patch_uclosed.shape[0])
-  # print('grid shape: ', patch_grids.shape[0]) #slightly for topo results and prediction results, because of the threshold setting.
-  
-  #replace to filtered id since 0122
   set_match_id = patch_idx_filter
-  #pred version
   all_pts_matched = []
   all_faces_matched = []
   vert_id_matched = 0
   for i in range(len(patch_grids)):
-    # faces = get_patch_mesh_faces(points_per_patch_dim, points_per_patch_dim, patch_uclosed[i], vert_id)
-    # faces = get_patch_mesh_faces(points_per_patch_dim, points_per_patch_dim, patch_uclosed[i], vert_id)
     pts, faces = get_patch_mesh_pts_faces(patch_grids[i], points_per_patch_dim, points_per_patch_dim, patch_uclosed[i], vert_id, True, 0.05)
     all_faces.append(faces)
-    # vert_id += points_per_patch_dim * points_per_patch_dim
     vert_id += pts.shape[0]
     all_pts.append(pts)
     if args.eval_matched and i in set_match_id:
       pts, faces = get_patch_mesh_pts_faces(patch_grids[i], points_per_patch_dim, points_per_patch_dim, patch_uclosed[i], vert_id_matched, True, 0.05)
       all_faces_matched.append(faces)
-      # vert_id += points_per_patch_dim * points_per_patch_dim
       vert_id_matched += pts.shape[0]
       all_pts_matched.append(pts)
   
-  # all_faces = np.array(all_faces).reshape(-1, 3)
   all_faces = np.concatenate(all_faces)
   all_pts = np.concatenate(all_pts)
   
   mesh = trimesh.Trimesh(vertices = all_pts, faces = all_faces)
-  # mesh.export('allpatch.obj')
 
   (closest_points,distances,triangle_id) = mesh.nearest.on_surface(input_pointcloud[:,:3])
   #return single_cd, pcov001, pcov002
@@ -486,7 +449,6 @@ def compute_overall_singlecd_param(pred_data, input_pointcloud, matching_indices
     distances = compute_overall_singlecd(pred_data['pred_patch_points'][0].detach().cpu().numpy(), patch_uclosed, input_pointcloud, matching_indices)
 
   # print('distance shape: ', distances.shape)
-  #param part
   cp_distance = ComputePrimitiveDistance(reduce = False)
   routines = {
             5: cp_distance.distance_from_sphere,
@@ -500,7 +462,6 @@ def compute_overall_singlecd_param(pred_data, input_pointcloud, matching_indices
   src_type_logits = pred_data['pred_patch_type'][0]
   src_param = pred_data['pred_patch_param'][0]
   input_pointcloud_torch = torch.tensor(input_pointcloud, device = src_patch_points.device)
-  # print('input pc shape: ',input_pointcloud_torch.shape)
   all_dists = []
   all_dists_matched = []
   set_match_id = set(matching_indices['indices'][0][0].tolist())
@@ -515,20 +476,14 @@ def compute_overall_singlecd_param(pred_data, input_pointcloud, matching_indices
   res = distances
   if len(all_dists) > 0:
     all_dists = torch.cat(all_dists, axis = 0)
-    # print('all_dists_shape: ', all_dists.shape)
     distances_all = np.concatenate([distances.reshape(1,-1), all_dists.detach().cpu().numpy()], axis = 0)
-
-    # return distances_all.min(0)
     res = distances_all.min(0)
   
   if args.eval_matched:
     res_matched = distances_matched
     if len(all_dists_matched) > 0:
       all_dists_matched = torch.cat(all_dists_matched, axis = 0)
-      # print('all_dists_shape: ', all_dists.shape)
       distances_all = np.concatenate([distances_matched.reshape(1,-1), all_dists_matched.detach().cpu().numpy()], axis = 0)
-
-      # return distances_all.min(0)
       res_matched = distances_all.min(0)
       
     return res, res_matched
@@ -537,14 +492,11 @@ def compute_overall_singlecd_param(pred_data, input_pointcloud, matching_indices
 def compute_overall_singlecd_param(pred_data, input_pointcloud, patch_idx_filter):
   #input pointcloud is a numpy
   #firstly, the grid parts
-  # print('matched computation')
   patch_close_logits = pred_data['closed_patch_logits'][0].detach().cpu().numpy()
   patch_uclosed = patch_close_logits[:,0] < patch_close_logits[:,1]
   
-  # if args.eval_matched:
   distances, distances_matched = compute_overall_singlecd(pred_data['pred_patch_points'][0].detach().cpu().numpy(), patch_uclosed, input_pointcloud, patch_idx_filter)
 
-  # print('distance shape: ', distances.shape)
   #param part
   cp_distance = ComputePrimitiveDistance(reduce = False)
   routines = {
@@ -559,10 +511,8 @@ def compute_overall_singlecd_param(pred_data, input_pointcloud, patch_idx_filter
   src_type_logits = pred_data['pred_patch_type'][0]
   src_param = pred_data['pred_patch_param'][0]
   input_pointcloud_torch = torch.tensor(input_pointcloud, device = src_patch_points.device)
-  # print('input pc shape: ',input_pointcloud_torch.shape)
   all_dists = []
   all_dists_matched = []
-  # set_match_id = set(matching_indices['indices'][0][0].tolist())
   set_match_id = patch_idx_filter
   print('all patch size: {} matched size: {}'.format(len(src_patch_points), len(set_match_id)))
   for patch_idx in range(len(src_patch_points)):
@@ -575,20 +525,15 @@ def compute_overall_singlecd_param(pred_data, input_pointcloud, patch_idx_filter
   res = distances
   if len(all_dists) > 0:
     all_dists = torch.cat(all_dists, axis = 0)
-    # print('all_dists_shape: ', all_dists.shape)
     distances_all = np.concatenate([distances.reshape(1,-1), all_dists.detach().cpu().numpy()], axis = 0)
 
-    # return distances_all.min(0)
     res = distances_all.min(0)
   
   if args.eval_matched:
     res_matched = distances_matched
     if len(all_dists_matched) > 0:
       all_dists_matched = torch.cat(all_dists_matched, axis = 0)
-      # print('all_dists_shape: ', all_dists.shape)
       distances_all = np.concatenate([distances_matched.reshape(1,-1), all_dists_matched.detach().cpu().numpy()], axis = 0)
-
-      # return distances_all.min(0)
       res_matched = distances_all.min(0)
       
     return res, res_matched
@@ -688,17 +633,13 @@ class PositionEmbeddingSine3D(nn.Module):
         dim_t = self.temperature ** (2 * (dim_t // 2) / self.num_pos_feats)
         
         pos = voxel_coord[:, :, None] / dim_t
-        #print("pos.shape: {}".format(pos.shape))
         pos_x = pos[:, 0]
         pos_y = pos[:, 1]
         pos_z = pos[:, 2]#in shape[n, pos_feature_dim]
-        #print("pos_x.shape: {}".format(pos_x.shape))
         pos_x = torch.stack((pos_x[:, 0::2].sin(), pos_x[:, 1::2].cos()), dim=2).flatten(1)
         pos_y = torch.stack((pos_y[:, 0::2].sin(), pos_y[:, 1::2].cos()), dim=2).flatten(1)
         pos_z = torch.stack((pos_z[:, 0::2].sin(), pos_z[:, 1::2].cos()), dim=2).flatten(1)
         pos = torch.cat((pos_x, pos_y, pos_z), dim=1)#.permute(0, 3, 1, 2)
-        #print("final pos.shape: {}".format(pos.shape))
-        #print("PositionEmbeddingSine3D:pos:{}".format(pos.device))
         return pos
 
 class MLP(nn.Module):
@@ -736,14 +677,8 @@ class MLP_hn(nn.Module): #hypernets of MLP
         else:
             self.layer1 = nn.Linear(input_dim_fea, hn_hidden_dim)
             self.layer2 = nn.Linear(hn_hidden_dim, sum(self.layers_size))
-        #weight change, no correct
-        # self.layer.weight.data *= 1.e-2
-        # self.layer.bias.data *= 1.e-2
         
     def forward(self, x, feature):
-      # print('feature size:', feature.shape)
-      # assert(feature)
-
       #ori version
       if not flag_hidden_layer:
         net_par = self.layer(feature)
@@ -752,30 +687,21 @@ class MLP_hn(nn.Module): #hypernets of MLP
         net_par = self.layer1(feature)
         net_par = F.relu(net_par)
         net_par = self.layer2(net_par)
-      # #reduce par
-      # # net_par = net_par * 1.e-2
       if args.hn_scale:
         net_par = net_par / math.sqrt(hn_pe_dim)
 
       net_par_layers = torch.split(net_par, self.layers_size, dim=-1)
       for i in range(len(self.layers_size)):
         layer_par = net_par_layers[i].view(net_par.shape[0], net_par.shape[1], net_par.shape[2] ,self.layers_dims[i][0], self.layers_dims[i][1])
-        #linear layer
-        # x = torch.mm(x, layer_par[:-1]) + layer_par[-1]
         x = torch.einsum('...ij,...jk->...ik', x, layer_par[...,:-1,:]) + layer_par[...,-1:,:]
-        # print('x shape: ', x.shape)
-        # print('layer par', layer_par.shape)
-        # x = torch.einsum('...ij,...jk->...ik', x, layer_par[...,:-1,:])
         if i < self.num_layers - 1:
           x = F.leaky_relu(x)
-          # x = F.relu(x)
       return x
         
 
 @torch.no_grad()
 def get_attention_mask(voxel_location, seq_length, tokens_each_sample, n_heads=8):
     #*n_heads
-    #mask = torch.ones([args.batch_size, tokens_each_sample, tokens_each_sample], dtype= torch.bool)
     mask_list = []
     position_each_sample = torch.split(voxel_location, tokens_each_sample)
     for i in range(args.batch_size):
@@ -784,10 +710,6 @@ def get_attention_mask(voxel_location, seq_length, tokens_each_sample, n_heads=8
         pairwise_distance = torch.cdist(voxel_position_cur_sample, voxel_position_cur_sample)
         cur_mask = F.pad(pairwise_distance > 3, (0, 0, 0, seq_length-cur_seq_length), value=False)
         cur_mask = F.pad(cur_mask, (0, seq_length-cur_seq_length), value=True)
-        #set diagonal to False
-        #diagonal_indices = torch.arange(seq_length, dtype=torch.long, device=voxel_location.device)
-        #cur_mask[diagonal_indices, diagonal_indices] = torch.zeros([seq_length], dtype=torch.bool, device=voxel_location.device)
-        #print(seq_length - cur_mask.sum(dim=-1))
         mask_list.append(cur_mask.view(1, seq_length, seq_length).repeat(n_heads, 1, 1)) #.repeat(n_heads, 1, 1)
     mask = torch.cat(mask_list, 0)#
     return mask
@@ -804,13 +726,8 @@ class BackBone2VoxelTokens(nn.Module):
         locations_pos = locations[:,:3]
         locations_batch_idx = locations[:,-1:]
         locations = torch.cat([locations_batch_idx, locations_pos], dim=1)
-        
-        #t0 = time.time()
         output = self.backbone([locations, features])
-        #t1 = time.time()
-        #print("{}s elapsed for Minkowski BackBone".format(t1-t0))
         
-        #t0 = time.time()
         sparse_locations = output.C#.to(device)
         sparse_features = output.F
                 
@@ -826,15 +743,11 @@ class BackBone2VoxelTokens(nn.Module):
         pad_dim = max(batch_number_samples)
         
         if(args.using_local_attention):
-          #print("seq_length = ", pad_dim)
           attention_mask = get_attention_mask(sparse_locations, pad_dim, batch_number_samples, n_heads=args.nheads) #not used
-          #print(attention_mask.shape, torch.nonzero(attention_mask).shape)
         else:
           attention_mask = None
         
         voxel_pos_embedding = self.position_encoding(sparse_locations)
-        #print(voxel_pos_embedding.shape, sparse_features.shape)
-        #sparse_features += voxel_pos_embedding
         voxel_feature = torch.split(sparse_features, batch_number_samples)
         voxel_pos_embedding = torch.split(voxel_pos_embedding, batch_number_samples)
         input_padding_mask = torch.split(input_padding_mask, batch_number_samples)
@@ -850,7 +763,6 @@ class BackBone2VoxelTokens(nn.Module):
         voxel_features = torch.stack(batch_voxel_feature, dim=1)
         voxel_features_padding_mask = torch.stack(input_padding_mask_list, dim=0)
         voxel_position_encoding = torch.stack(position_embedding_list, dim=1)
-        #print("input feature to transformer shape: {}".format(batch_voxel_feature.shape))
         return voxel_features, voxel_position_encoding, voxel_features_padding_mask, torch.split(torch.cat((batch_idx.view(-1,1), sparse_locations), dim=-1), batch_number_samples), attention_mask
 
 class DETR_Corner_Tripath(nn.Module):
@@ -867,18 +779,14 @@ class DETR_Corner_Tripath(nn.Module):
         """
         super().__init__()
         self.num_queries = num_queries
-        # hidden_dim = transformer.d_model
         self.empty_prediction_embed = nn.Linear(hidden_dim, 2)#num_classes + 1, empty or non-empty
         self.corner_position_embed = MLP(hidden_dim, hidden_dim, 3, 3) #was bbox embed
-        # self.query_embed = nn.Embedding(num_queries, hidden_dim)
-        #self.input_proj = nn.Conv2d(backbone.num_channels, hidden_dim, kernel_size=1)
         self.aux_loss = aux_loss
         
         if not args.no_topo:
           if True:
             self.corner_topo_embed_curve = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim, 1) #topo embed dim:256, matrix_eigen_similarity: False
             self.corner_topo_embed_patch = MLP(hidden_dim, args.topo_embed_dim, args.topo_embed_dim, 1) #topo embed dim:256, matrix_eigen_similarity: False
-          #(self, input_dim, hidden_dim, output_dim, num_layers, sin=False):
           
         
     def forward(self, hs):
@@ -896,22 +804,6 @@ class DETR_Corner_Tripath(nn.Module):
                - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
                                 dictionnaries containing the two above keys for each decoder layer.
         """                
-        # src = voxel_features
-        # pos = voxel_position_encoding
-        # mask = voxel_features_padding_mask
-        # #print(src.device, mask.device, self.query_embed.weight.device, pos.device)
-        # #t1 = time.time()
-        # #print("{}s elapsed for prepare data for transformer and encoding position".format(t1-t0))
-        
-        # #t0 = time.time()
-        # assert mask is not None
-        # hs = self.transformer(src, mask, self.query_embed.weight, pos, src_attention_mask=attention_mask)[0] #self.input_proj, the first element
-        #t1 = time.time()
-        #print("{}s elapsed for prepare data for transformer forwarding".format(t1-t0))
-        #print("hs.shape=", hs.shape)[6, 2, 100, 192]
-        
-        #t0 = time.time()
-        #outputs_class = self.class_embed(hs)
         outputs_corner_coord = self.corner_position_embed(hs).tanh()*0.5 # [-0.5,0.5] #6,1,100,3
         outputs_class = self.empty_prediction_embed(hs) #to be consistent with curve and patch type prediction, we treat 0 as non-empty and 1 as empty
         
@@ -930,16 +822,11 @@ class DETR_Corner_Tripath(nn.Module):
             out['aux_outputs'] = self._set_aux_loss(outputs_class, outputs_corner_coord, output_corner_topo_embedding)
         else:
           out = {'pred_logits': outputs_class[-1], 'pred_corner_position': outputs_corner_coord[-1]} #only return last layer info
-        #t1 = time.time()
-        #print("{}s elapsed for class and geometry embedding(auxilary included)".format(t1-t0))
-        
         return out
 
     @torch.jit.unused
     def _set_aux_loss(self, outputs_class, outputs_coord, output_corner_topo_embedding):
         # this is a workaround to make torchscript happy, as torchscript
-        # doesn't support dictionary with non-homogeneous values, such
-        # as a dict having both a Tensor and a list.
         return [{'pred_logits': a, 'pred_corner_position': b, 'corner_topo_embed': c}
                 for a, b, c in zip(outputs_class[:-1], outputs_coord[:-1], output_corner_topo_embedding[:-1])]
 
@@ -959,41 +846,19 @@ class DETR_Curve_Tripath(nn.Module):
         """
         super().__init__()
         self.num_queries = num_queries
-        # self.transformer = transformer
-        # hidden_dim = transformer.d_model
         self.valid_curve_embed = MLP(hidden_dim, hidden_dim, 2, args.curve_embedding_mlp_layers)
-        #nn.Linear(hidden_dim, 5)#num_classes + 1, Circle, BSpline, Line, Ellipse or non-empty
         self.curve_type_prediction_embed = MLP(hidden_dim, hidden_dim, 4, args.curve_embedding_mlp_layers)
         self.closed_curve_embed = MLP(hidden_dim, hidden_dim, 2, 3) #not closed, closed
-        # self.query_embed = nn.Embedding(num_queries, hidden_dim) #independent query embedding
-        #self.input_proj = nn.Conv2d(backbone.num_channels, hidden_dim, kernel_size=1)
         self.aux_loss = aux_loss
-        
         self.curve_start_point_embed = MLP(hidden_dim, hidden_dim, 3, 3)
-        
         if args.no_pe:
           if True:
             #no pe
             self.curve_shape_embed = MLP_hn(1, hn_mlp_dim, 3, 3, hidden_dim)
-            # coord = torch.arange()
-            # coord = (torch.arange(points_per_curve, dtype=torch.float32, device=device) / (points_per_curve - 1)).view(-1,1)
-            # exp  = torch.arange(hn_pe_dim//2, dtype=torch.float32, device=device)
-            # base = args.pe_sin_base * torch.ones([hn_pe_dim//2], dtype=torch.float32, device=device)
-            # coeff = 2 * math.pi * torch.pow(base, exp).view(1,-1)
-            # mat = torch.mm(coord, coeff)
-            # sin_mat = torch.sin(mat).view(-1,1)
-            # cos_mat = torch.cos(mat).view(-1,1)
-            # self.curve_pe = torch.cat([sin_mat, cos_mat], dim=1).view(points_per_curve, hn_pe_dim)
             self.curve_pe = (torch.arange(points_per_curve, dtype=torch.float32, device=device) / (points_per_curve - 1)).view(points_per_curve,1)
-            # self.curve_pe = torch.zeros([points_per_curve, hn_pe_dim], dtype=torch.float32, device = device)
         elif not args.pe_sin:
           if args.ori_mlp:
             self.curve_shape_embed = MLP(hidden_dim + 1, hidden_dim, 3, 6, sin=args.sin) #ori version
-            # self.curve_shape_embed = MLP(hidden_dim + 1, args.hidden_dim_mlp, 3, 6, sin=args.sin)
-            # self.curve_shape_embed = MLP(hidden_dim + 1, args.hidden_dim_mlp, 3, 5, sin=args.sin)
-
-            # self.curve_shape_embed = MLP(hidden_dim + 1, hidden_dim, 3, 8, sin=args.sin) #1228 #displacement from start point
-            #displacement from start point
           else:
             if flag_hn_with_coord:
               self.curve_shape_embed = MLP_hn(hn_pe_dim + 1, hn_mlp_dim, 3, 3, hidden_dim)
@@ -1002,7 +867,6 @@ class DETR_Curve_Tripath(nn.Module):
             self.curve_pe = nn.Embedding(points_per_curve, hn_pe_dim)
         else:
           self.curve_shape_embed = MLP_hn(hn_pe_dim, hn_mlp_dim, 3, 3, hidden_dim)
-          # coord = torch.arange()
           coord = (torch.arange(points_per_curve, dtype=torch.float32, device=device) / (points_per_curve - 1)).view(-1,1)
           exp  = torch.arange(hn_pe_dim//2, dtype=torch.float32, device=device)
           base = args.pe_sin_base * torch.ones([hn_pe_dim//2], dtype=torch.float32, device=device)
@@ -1011,8 +875,6 @@ class DETR_Curve_Tripath(nn.Module):
           sin_mat = torch.sin(mat).view(-1,1)
           cos_mat = torch.cos(mat).view(-1,1)
           self.curve_pe = torch.cat([sin_mat, cos_mat], dim=1).view(points_per_curve, hn_pe_dim)
-          # self.curve_pe = torch.zeros([points_per_curve, hn_pe_dim], dtype=torch.float32, device = device)
-
           
         if not args.no_topo:
           if True:
@@ -1046,41 +908,12 @@ class DETR_Curve_Tripath(nn.Module):
                - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
                                 dictionnaries containing the two above keys for each decoder layer.
         """
-        # #pri embd: 3x192
-        # src = voxel_features
-        # pos = voxel_position_encoding
-        # mask = voxel_features_padding_mask
-        # #print(src.device, mask.device, self.query_embed.weight.device, pos.device)
-        
-        # if(corner_query_features is not None and primitive_type_embed is not None):
-        #   assert(attention_mask is None)
-        #   #add voxel embedding feature to voxel features
-        #   voxel_features_mod = src + primitive_type_embed[0]
-        #   corner_query_features_mod = corner_query_features + primitive_type_embed[1]
-        #   src = torch.cat([corner_query_features_mod.transpose(0,1), voxel_features_mod], dim=0)
-        #   #print(mask.shape, pos.shape)
-        #   mask = F.pad(mask, (args.num_queries, 0), value=False)
-        #   #TODO: add corner position encoding or query index position encoding
-        #   pos = F.pad(pos, (0, 0, 0, 0, args.num_queries, 0), value=0)
-          
-        
-        # #t0 = time.time()
-        # assert mask is not None
-        # hs = self.transformer(src, mask, self.query_embed.weight, pos, src_attention_mask=attention_mask)[0] #self.input_proj
-        #t1 = time.time()
-        #print("{}s elapsed for prepare data for transformer forwarding".format(t1-t0))
-        #print("hs.shape=", hs.shape)[6, 2, 100, 192] #six layer
-        
-        #t0 = time.time()
-        #outputs_class = self.class_embed(hs)
         outputs_start_point_coord = self.curve_start_point_embed(hs).tanh()*0.5 # [-0.5,0.5]
         if not flag_using_scale:
           curve_shape_scale = 1#F.elu(self.curve_shape_scale_embed(hs)).unsqueeze(-2) + 1.0
         else:
           curve_shape_scale = F.elu(self.curve_shape_scale_embed(hs)).unsqueeze(-2) + 1.0
-        #assert(len(outputs_start_point_coord.shape) + 1 == len(curve_shape_scale.shape))
         
-        # if True:
         if args.enable_aux_loss:
           parameterization_coord = (torch.arange(points_per_curve, dtype=torch.float32, device=hs.device) / (points_per_curve - 1)).view(1, 1, 1, points_per_curve, 1).repeat(args.dec_layers, args.batch_size, args.num_curve_queries, 1, 1)
         else:
@@ -1092,17 +925,9 @@ class DETR_Curve_Tripath(nn.Module):
             sampled_points = outputs_start_point_coord.unsqueeze(-2).repeat(1,1,1,points_per_curve,1) + self.curve_shape_embed(sampled_points_feature, hs)
         elif not args.pe_sin:
           if args.ori_mlp:
-            # sampled_points_feature = torch.cat([hs.unsqueeze(-2).repeat(1, 1, 1, points_per_curve, 1), parameterization_coord], dim=-1)
-            # #in shape [6, bs, 100, 34, 3]
-            # sampled_points = outputs_start_point_coord.unsqueeze(-2).repeat(1,1,1,points_per_curve,1) + curve_shape_scale*self.curve_shape_embed(sampled_points_feature)
             sampled_points_feature = torch.cat([hs.unsqueeze(-2).repeat(1, 1, 1, points_per_curve, 1), parameterization_coord], dim=-1)
-            #in shape [6, bs, 100, 34, 3]
             sampled_points = outputs_start_point_coord.unsqueeze(-2).repeat(1,1,1,points_per_curve,1) + curve_shape_scale*self.curve_shape_embed(sampled_points_feature)
           else:
-            # sampled_points_feature = torch.cat([self.curve_pe.weight.view(1,1,1,points_per_curve, hn_pe_dim).repeat(1, args.batch_size, args.num_queries, 1,1) ,parameterization_coord], dim=-1)
-            
-            #not concate coord
-            #hs shape: [1, bs, 100, *]
             if flag_hn_with_coord:
               sampled_points_feature = torch.cat([self.curve_pe.weight.view(1,1,1,points_per_curve, hn_pe_dim).repeat(1, args.batch_size, args.num_curve_queries, 1,1), parameterization_coord], dim=-1)
             else:
@@ -1125,8 +950,6 @@ class DETR_Curve_Tripath(nn.Module):
             if True:
               output_curve_topo_embedding_corner = self.curve_topo_embed_corner(hs)
               output_curve_topo_embedding_patch = self.curve_topo_embed_patch(hs)
-              # output_curve_topo_embedding_patch = self.curve_topo_embed_corner(hs)
-              
         if not args.no_topo:
           if True:
             out = {'pred_curve_logits': is_curve_valid_pred[-1], 'pred_curve_type': outputs_class[-1], 'pred_curve_points': sampled_points[-1], 'closed_curve_logits':is_curve_closed_logits[-1], 'curve_topo_embed_corner': output_curve_topo_embedding_corner[-1], 'curve_topo_embed_patch': output_curve_topo_embedding_patch[-1]}
@@ -1134,8 +957,6 @@ class DETR_Curve_Tripath(nn.Module):
             out['aux_outputs'] = self._set_aux_loss(is_curve_valid_pred, outputs_class, sampled_points, is_curve_closed_logits, output_curve_topo_embedding)
         else:
            out = {'pred_curve_logits': is_curve_valid_pred[-1], 'pred_curve_type': outputs_class[-1], 'pred_curve_points': sampled_points[-1], 'closed_curve_logits':is_curve_closed_logits[-1]}
-        #t1 = time.time()
-        #print("{}s elapsed for class and geometry embedding(auxilary included)".format(t1-t0))
         
         return out
 
@@ -1161,21 +982,15 @@ class DETR_Patch_Tripath(nn.Module):
         """
         super().__init__()
         self.num_queries = num_queries
-        # self.transformer = transformer
-        # hidden_dim = transformer.d_model
         self.valid_patch_embed = MLP(hidden_dim, hidden_dim, 2, args.curve_embedding_mlp_layers)
         #Cylinder, Torus, BSpline, Plane, Cone, Sphere
         self.patch_type_prediction_embed = MLP(hidden_dim, hidden_dim, 6, args.curve_embedding_mlp_layers)
         if args.patch_close:
           self.closed_patch_embed = MLP(hidden_dim, hidden_dim, 2, 3) #not closed, closed
-
-        # self.query_embed = nn.Embedding(num_queries, hidden_dim) #independent query embedding
         self.aux_loss = aux_loss
-        
         self.patch_center_embed = MLP(hidden_dim, hidden_dim, 3, 3)
         if flag_using_scale:
           self.patch_shape_scale_embed = MLP(hidden_dim, hidden_dim, 1, 3)
-        # self.patch_shape_embed = MLP(hidden_dim + 2, hidden_dim, 3, 6, sin=args.sin) #displacement from start point
         output_dim = 3
         if args.output_normal:
           output_dim = 6
@@ -1197,11 +1012,7 @@ class DETR_Patch_Tripath(nn.Module):
 
         elif not args.pe_sin:
           if args.ori_mlp:
-            # self.patch_shape_embed = MLP(hidden_dim + 2, args.hidden_dim_mlp, 3, 6, sin=args.sin) 
-            # self.patch_shape_embed = MLP(hidden_dim + 2, args.hidden_dim_mlp, 3, 5, sin=args.sin) 
-
             self.patch_shape_embed = MLP(hidden_dim + 2, hidden_dim, 3, 6, sin=args.sin) #1227, ori
-            #displacement from start point
           else:
             if flag_hn_with_coord:
               self.patch_shape_embed = MLP_hn(hn_pe_dim * 2 + 2, hn_mlp_dim, output_dim, 3, hidden_dim)
@@ -1211,7 +1022,6 @@ class DETR_Patch_Tripath(nn.Module):
             self.patch_pe_y = nn.Embedding(points_per_patch_dim, hn_pe_dim)
         else:
           self.patch_shape_embed = MLP_hn(hn_pe_dim * 2, hn_mlp_dim, 3, 3, hidden_dim)
-          #for computing patch_pe_x
           coord = (torch.arange(points_per_patch_dim, dtype=torch.float32, device=device) / (points_per_patch_dim - 1)).view(-1,1)
           exp  = torch.arange(hn_pe_dim//2, dtype=torch.float32, device=device)
           base = args.pe_sin_base * torch.ones([hn_pe_dim//2], dtype=torch.float32, device=device)
@@ -1219,7 +1029,6 @@ class DETR_Patch_Tripath(nn.Module):
           mat = torch.mm(coord, coeff)
           sin_mat = torch.sin(mat).view(-1,1)
           cos_mat = torch.cos(mat).view(-1,1)
-          # self.curve_pe = torch.cat([sin_mat, cos_mat], dim=1).view(points_per_curve, hn_pe_dim)
           self.patch_pe_x = torch.cat([sin_mat, cos_mat], dim=1).view(points_per_patch_dim, hn_pe_dim)
           self.patch_pe_y = self.patch_pe_x
 
@@ -1235,11 +1044,6 @@ class DETR_Patch_Tripath(nn.Module):
           
         if args.patch_lap:
           mask = torch.arange(points_per_patch_dim*points_per_patch_dim, dtype=torch.int64, device=device).view(points_per_patch_dim, points_per_patch_dim)
-          # self.mask_x_minus = torch.cat([mask[:,0:1], mask[:,0:-2], mask[:,-1:]], dim = 1).view(points_per_patch_dim*points_per_patch_dim)
-          # self.mask_x_plus = torch.cat([mask[:,0:1], mask[:,2:], mask[:,-1:]], dim = 1).view(points_per_patch_dim*points_per_patch_dim)
-          # self.mask_y_minus = torch.cat([mask[0:1], mask[0:-2], mask[-1:]], dim = 0).view(points_per_patch_dim*points_per_patch_dim)
-          # self.mask_y_plus = torch.cat([mask[0:1], mask[2:], mask[-1:]], dim = 0).view(points_per_patch_dim*points_per_patch_dim)
-
           self.mask_x_minus = torch.arange(points_per_patch_dim*points_per_patch_dim, dtype=torch.int64, device=device).view(points_per_patch_dim, points_per_patch_dim)
           self.mask_x_plus = torch.arange(points_per_patch_dim*points_per_patch_dim, dtype=torch.int64, device=device).view(points_per_patch_dim, points_per_patch_dim)
           self.mask_y_minus = torch.arange(points_per_patch_dim*points_per_patch_dim, dtype=torch.int64, device=device).view(points_per_patch_dim, points_per_patch_dim)
@@ -1285,32 +1089,6 @@ class DETR_Patch_Tripath(nn.Module):
                - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
                                 dictionnaries containing the two above keys for each decoder layer.
         """
-                
-        # src = voxel_features
-        # pos = voxel_position_encoding
-        # mask = voxel_features_padding_mask
-        # #print(src.device, mask.device, self.query_embed.weight.device, pos.device)
-        
-        # if(curve_query_features is not None and primitive_type_embed is not None):
-        #   assert(attention_mask is None)
-        #   #add voxel embedding feature to voxel features
-        #   voxel_features_mod = src + primitive_type_embed[0]
-        #   curve_query_features_mod = curve_query_features + primitive_type_embed[2]
-        #   src = torch.cat([curve_query_features_mod.transpose(0,1), voxel_features_mod], dim=0)
-        #   #print(mask.shape, pos.shape)
-        #   mask = F.pad(mask, (args.num_queries, 0), value=False)
-        #   #TODO: add corner position encoding or query index position encoding
-        #   pos = F.pad(pos, (0, 0, 0, 0, args.num_queries, 0), value=0)
-          
-        
-        # #t0 = time.time()
-        # assert mask is not None
-        # hs = self.transformer(src, mask, self.query_embed.weight, pos, src_attention_mask=attention_mask)[0] #self.input_proj
-        #t1 = time.time()
-        #print("{}s elapsed for prepare data for transformer forwarding".format(t1-t0))
-        #print("hs.shape=", hs.shape)[6, 2, 100, 192]
-        
-        #t0 = time.time()
         outputs_start_point_coord = self.patch_center_embed(hs).tanh()*0.5 # [-0.5,0.5]
         if not flag_using_scale:
           patch_shape_scale = 1#F.elu(self.patch_shape_scale_embed(hs)).unsqueeze(-2) + 1.0
@@ -1332,7 +1110,6 @@ class DETR_Patch_Tripath(nn.Module):
           sampled_points = outputs_start_point_coord.unsqueeze(-2).repeat(1,1,1,points_per_patch_dim*points_per_patch_dim,1) + self.patch_shape_embed(sampled_points_feature, hs)[...,:3]
           if args.output_normal:
             sampled_normals = self.patch_shape_embed(sampled_points_feature, hs)[...,3:]
-            #normalize normals
             sampled_normals = F.normalize(sampled_normals, dim=-1)
         elif args.spe:
           sampled_points_feature = [torch.cat([self.patch_pe_x[i], self.patch_pe_y[j]], dim = -1) for i in range(points_per_patch_dim) for j in range(points_per_patch_dim)]
@@ -1373,8 +1150,6 @@ class DETR_Patch_Tripath(nn.Module):
             out['aux_outputs'] = self._set_aux_loss(is_patch_valid_pred, outputs_class, sampled_points, output_patch_topo_embedding)
         else:
           out = {'pred_patch_logits': is_patch_valid_pred[-1], 'pred_patch_type': outputs_class[-1], 'pred_patch_points': sampled_points[-1]}  
-        #t1 = time.time()
-        #print("{}s elapsed for class and geometry embedding(auxilary included)".format(t1-t0))
         if args.patch_normal or args.output_normal:
           out['mask_x'] = self.mask_x
           out['mask_y'] = self.mask_y
@@ -3898,350 +3673,6 @@ def model_evaluation(model_shape, corner_loss_criterion, curve_loss_criterion, p
   filepath = os.path.join(obj_dir, 'test_statistics.xlsx')
   df.to_excel(filepath, index=True)
 
-def model_evaluation_from_file(model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, train_iter, flag_output = True):
-  import trimesh
-  from numpy import linalg as LA
-  from scipy.spatial import cKDTree
-  def numpy_chamfer_dist(src, tgt):
-    kdtree1 = cKDTree(src)
-    dist_tgt, idx_tgt = kdtree1.query(tgt)
-    kdtree2 = cKDTree(tgt)
-    dist_src, idx_src = kdtree2.query(src)
-    return (dist_src.mean() + dist_tgt.mean()) / 2.0
-  
-  disable_aux_loss_output = True
-  model_shape.eval()
-  corner_loss_criterion.eval()
-  curve_loss_criterion.eval()
-  patch_loss_criterion.eval()
-  assert(args.batch_size == 1)
-  #test_data = train_data_loader(1, voxel_dim=voxel_dim, device=device, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, data_folder="test_data")
-  data_loader_iterator = iter(train_data)
-  
-  obj_dir = os.path.join("experiments", args.experiment_name, "test_obj")
-  if(not os.path.exists(obj_dir)): os.mkdir(obj_dir)
-  
-  test_statistics = []
-  sample_name_list = []
-  
-  # sample_count = 0
-  def export_curves(curve_points, points_number_per_curve, output_obj_file):
-        curve_points = np.reshape(curve_points, [-1,3])
-        with open(output_obj_file, "w") as wf:
-          for point in curve_points:
-            wf.write("v {} {} {}\n".format(point[0], point[1], point[2]))
-          for i in range(curve_points.shape[0]):
-            if(i % points_number_per_curve == (points_number_per_curve - 1)):
-              continue
-            wf.write("l {} {}\n".format(i+1, i+2))
-
-  dict_sum = {}
-
-  dict_sum["corner_all_cd"] = 0.0
-  dict_sum["curve_all_cd"] = 0.0
-  dict_sum["patch_all_cd"] = 0.0
-
-  #valid data from test dictionary
-  path = obj_dir
-  allfs = os.listdir(obj_dir)
-  all_valid_id = []
-  for f in allfs:
-    if f.endswith("_opt_post_mix_final_curves.ply"):
-      all_valid_id.append(int(f.split("_")[0]))
-  
-  print('valid size: ', len(all_valid_id))
-  all_valid_id_set = set(all_valid_id)
-  
-  nopatchcount = 0
-  while(True):
-    try:
-      data_item = next(data_loader_iterator)
-    except StopIteration:
-      #data_loader_iterator = iter(train_data)
-      #data_item = next(data_loader_iterator)
-      break
-    locations = data_item[0].to(device)
-    features = data_item[1].to(device)
-    corner_points = data_item[2].to(device)
-    corner_batch_idx = data_item[3].to(device)
-    batch_sample_id = data_item[5]
-    target_curves_list = data_item[6]
-    target_patches_list = data_item[7]
-
-    sample_id = int(batch_sample_id[0].replace(".pkl" ,""))
-    if sample_id not in all_valid_id_set:
-      continue
-    # sample_count+=1
-    print ('sample_id: ', sample_id)
-    #convert target_curves_list and target_patches_list to cuda tensors
-    for i in range(len(target_curves_list)):
-      for k in target_curves_list[i]:
-        target_curves_list[i][k] = target_curves_list[i][k].to(device)
-    
-    for i in range(len(target_patches_list)):
-      for k in target_patches_list[i]:
-        if k == 'patch_points' or k == 'patch_normals':
-          for j in range(len(target_patches_list[i][k])): #list
-            target_patches_list[i][k][j] = target_patches_list[i][k][j].to(device)
-        else:
-          target_patches_list[i][k] = target_patches_list[i][k].to(device)
-    
-    #supervision
-    batch_corner_numbers = []
-    for i in range(args.batch_size):
-      batch_corner_numbers.append((corner_batch_idx==i).sum())
-    target_corner_points_list = torch.split(corner_points, batch_corner_numbers)
-    
-    #batch size should be one
-    cur_id = sample_id
-    pred_curve_file = os.path.join(path, "{}_opt_post_mix_final_curves.ply".format(cur_id))
-    pred_curve_close_file = os.path.join(path, "{}_opt_post_mix_final_curves_close.txt".format(cur_id))
-    pred_corner_file = os.path.join(path, "{}_opt_post_mix_final_corner.ply".format(cur_id))
-    pred_patch_file = os.path.join(path, "{}_opt_post_mix_step5.obj".format(cur_id))
-    pred_patch_mask_file = os.path.join(path, "{}_opt_post_mix_facemask.txt".format(cur_id))
-    pred_corres = os.path.join(path, "{}_opt_post_mix_final_topo.txt".format(cur_id))
-    if args.fittingonce:
-      pred_curve_file = os.path.join(path, "{}_opt_post_mix_curves_init.ply".format(cur_id))
-      pred_corner_file = os.path.join(path, "{}_opt_post_mix_corners_init.ply".format(cur_id))
-    
-    if not os.path.exists(pred_patch_mask_file):
-      continue
-    if not os.path.exists(pred_corres):
-      continue
-
-    pred_curve = load_ply_pts(pred_curve_file)
-    pred_corner = load_ply_pts(pred_corner_file)
-    
-    #numpy corner curve patch
-    # curve = target_curves_list[0]['curve_points'][::3].cpu().numpy()
-    curve = []
-    for i in range(target_curves_list[0]['curve_points'].shape[0]):
-      curve.append(target_curves_list[0]['curve_points'][i].cpu().numpy())
-    curve = np.concatenate(curve)
-    corner = target_corner_points_list[0].cpu().numpy()
-    allpatch = []
-    for i in range(len(target_patches_list)):
-      for j in range(len(target_patches_list[i]['patch_points'])): #list
-        allpatch.append(target_patches_list[i]['patch_points'][j].cpu().numpy())
-
-    allpatch = np.concatenate(allpatch)
-    # print("all patch shape ", allpatch.shape)        
-    dist_curve = 0.0
-    if pred_curve.shape[0] > 0 and curve.shape[0] > 0:
-      dist_curve = numpy_chamfer_dist(pred_curve, curve)
-    dist_corner = 0.0
-    if pred_corner.shape[0] > 0 and corner.shape[0] > 0:
-      dist_corner = numpy_chamfer_dist(pred_corner, corner)
-    
-    dist_patch = 0.0
-    n_sample = 10000
-    # print('mesh file: ', pred_patch_file)
-    mesh = trimesh.load(pred_patch_file)
-    #if there are no faces, set distance to 0
-    meshtype = str(type(mesh))
-    pc, idx = None, None
-    if meshtype.split(' ')[-1].split('.')[-1][:-2] != 'PointCloud':
-      pc, idx = mesh.sample(n_sample, return_index=True)
-      dist_patch = numpy_chamfer_dist(pc, allpatch)
-      # np.savetxt(os.path.join(path, "{}_opt_post_mix_step5.xyz".format(cur_id)), pc)
-      # np.savetxt(os.path.join(path, "{}_opt_post_mix_gt.xyz".format(cur_id)), allpatch[:, :3])
-      # np.savetxt('gt_patch.xyz', allpatch[:, :3])
-    else:
-      nopatchcount += 1
-    
-    summary_loss_dict = {}
-    summary_loss_dict["corner_all_cd"] = dist_corner
-    summary_loss_dict["curve_all_cd"] = dist_curve
-    summary_loss_dict["patch_all_cd"] = dist_patch
-    
-    pred_face_mask = np.loadtxt(pred_patch_mask_file, dtype = int)
-    pred_curve_close = np.loadtxt(pred_curve_close_file, dtype = int)
-    #get pred data
-    pred_corner_data = {}
-    pred_corner_data['pred_corner_position'] = torch.from_numpy(pred_corner).type(torch.FloatTensor).unsqueeze(0).to(device)
-    pred_corner_data['pred_logits'] = torch.zeros([1,pred_corner.shape[0], 2], device = device)
-    pred_corner_data['pred_logits'][0][:,0] = 1
-    
-    pred_curve_data = {}
-    pred_curve_data['pred_curve_points'] = torch.from_numpy(pred_curve).type(torch.FloatTensor).view(1,-1,34,3).to(device)
-    # print('pred curve points, ', pred_curve_data['pred_curve_points'].shape)
-    # print('gt curve points, ', target_curves_list[0]['curve_points'].shape)
-    pred_curve_data['pred_curve_logits'] = torch.zeros([1,pred_curve.shape[0] // 34, 2], device = device)
-    pred_curve_data['pred_curve_logits'][0][:,0] = 1
-    pred_curve_data['pred_curve_type'] = torch.zeros([1,pred_curve.shape[0], 4], device = device) #not set
-    
-    pred_curve_data['closed_curve_logits'] = torch.zeros([1,pred_curve.shape[0], 2], device = device) #not need to set
-    
-    #length weighting set to one
-    target_curves_list[0]['curve_length_weighting'][:] = 1.0
-
-    pred_patch_data = {}
-    #patch points
-
-    #corner matching
-    corner_loss_dict, corner_matching_indices = corner_loss_criterion(pred_corner_data, target_corner_points_list)
-
-    curve_loss_dict, curve_matching_indices = curve_loss_criterion(pred_curve_data, target_curves_list)
-
-    
-    #get topo information
-    for k in corner_loss_dict.keys():
-      summary_loss_dict["corner_" + k] = corner_loss_dict[k].item()
-    
-    for k in curve_loss_dict.keys():
-      summary_loss_dict["curve_" + k] = curve_loss_dict[k].item()
-    
-    n_pred_patch = 0
-    patch_samples = []
-    if pred_face_mask.shape[0]:
-      n_pred_patch = pred_face_mask.max() + 1
-      mesh_verts = mesh.vertices
-      mesh_faces = mesh.faces
-      patch_faces = [[] for i in range(n_pred_patch)]
-      assert(mesh_faces.shape[0] == pred_face_mask.shape[0])
-      for i in range(pred_face_mask.shape[0]):
-        patch_faces[pred_face_mask[i]].append(mesh_faces[i])
-      
-      n_single_patch_sample = 100
-      flag_emtpy_patch = False
-      for i in range(n_pred_patch):
-        # if len(patch_faces[i]) == 0:
-        #   print("empty patch: ", i)
-        #   flag_emtpy_patch = True
-        #   break
-        # commented on 0903
-        assert(len(patch_faces[i]) > 0)
-        tmpmesh = trimesh.Trimesh(vertices=mesh_verts, faces = patch_faces[i])
-        tmppc, tmpidx = tmpmesh.sample(n_single_patch_sample, return_index=True)
-        patch_samples.append(tmppc)
-      # np.savetxt('patch_{}.xyz'.format(i), tmppc)
-      if flag_emtpy_patch:
-        continue
-      pred_patch_data['pred_patch_points'] = torch.tensor(patch_samples,dtype=torch.float32, device = device).view(1,-1, 100, 3)
-      pred_patch_data['pred_patch_logits'] = torch.zeros([1,n_pred_patch,2],device = device)
-      pred_patch_data['pred_patch_logits'][0][:,0] = 1
-      pred_patch_data['pred_patch_type'] = torch.zeros([1,n_pred_patch,6], device = device)
-      patch_loss_dict, patch_matching_indices = patch_loss_criterion(pred_patch_data, target_patches_list)
-      for k in patch_loss_dict.keys():
-        summary_loss_dict["patch_" + k] = patch_loss_dict[k].item()
-    else:
-      summary_loss_dict["patch_cd"] = 0.0
-      summary_loss_dict["patch_precision"] = 0.0
-      summary_loss_dict["patch_recall"] = 0.0
-      summary_loss_dict["patch_type_class_accuracy"] = 0.0
-
-    
-    #topo error
-    f = open(pred_corres, 'r')
-    lines = f.readlines()
-    line_iter = 0
-    n_topo_patch = int(lines[0].split()[0])
-    n_topo_curve = int(lines[0].split()[1])
-    line_iter += 1
-    pred_patch2curve = [[] for i in range(n_topo_patch)]
-    for i in range(n_topo_patch):
-      line = lines[line_iter].split()
-      assert(len(line) == n_topo_curve)
-      for j in range(n_topo_curve):
-        pred_patch2curve[i].append(float(line[j]))
-      line_iter += 1
-
-    n_topo_corner = int(lines[line_iter].split()[1])
-    print("patch {} curve {} corner {}".format(n_topo_patch, n_topo_curve, n_topo_corner))
-    pred_curve2corner = [[] for i in range(n_topo_curve)]
-    line_iter += 1
-    for i in range(n_topo_curve):
-      line = lines[line_iter].split()
-      assert(len(line) == n_topo_corner)
-      for j in range(n_topo_corner):
-        pred_curve2corner[i].append(float(line[j]))
-      line_iter += 1
-    f.close()
-    
-    
-    if patch_matching_indices['indices'][0][0].shape[0] and curve_matching_indices['indices'][0][0].shape[0]:
-      #patch curve correspondence
-      pred_patch2curve = torch.tensor(pred_patch2curve, device = device, dtype = torch.float).view(len(pred_patch2curve), -1)
-
-      pred_patch2curve = pred_patch2curve[patch_matching_indices['indices'][0][0],][:,curve_matching_indices['indices'][0][0]]
-      gt_patch2curve = target_patches_list[0]['patch_curve_correspondence'][patch_matching_indices['indices'][0][1],][:,curve_matching_indices['indices'][0][1]]
-      assert(pred_patch2curve.shape == gt_patch2curve.shape)
-      # summary_loss_dict['topo_patch_curve'] = F.binary_cross_entropy(pred_patch2curve.view(-1), gt_patch2curve.view(-1)).item()
-      summary_loss_dict['topo_patch_curve'] = (pred_patch2curve - gt_patch2curve).abs().mean().item()
-      # summary_loss_dict['topo_patch_curve'] /= (len(pred_patch2curve) * (len(pred_patch2curve[0])))
-    else:
-      summary_loss_dict['topo_patch_curve'] = 0.0
-    
-    if curve_matching_indices['indices'][0][0].shape[0] and corner_matching_indices['indices'][0][0].shape[0]:
-      pred_curve2corner = torch.tensor(pred_curve2corner, device=device, dtype = torch.float).view(len(pred_curve2corner), -1)
-      pred_curve2corner = pred_curve2corner[curve_matching_indices['indices'][0][0],][:,corner_matching_indices['indices'][0][0]]
-      
-      #not filtered with open curve idx
-      curve2corner_gt = target_curves_list[0]['endpoints'][curve_matching_indices['indices'][0][1]]
-      # curve2corner_gt = target_curves_list[0]['endpoints']
-
-      gt_curve2corner = torch.zeros([curve_matching_indices['indices'][0][1].shape[0], target_corner_points_list[0].shape[0]], device=device, dtype = torch.float)
-      
-      # print('gt curve2corner : ', gt_curve2corner.shape)
-      # print('curve2corner: ', curve2corner_gt)
-      gt_curve2corner[torch.arange(gt_curve2corner.shape[0]), curve2corner_gt[:,0]] = 1
-      gt_curve2corner[torch.arange(gt_curve2corner.shape[0]), curve2corner_gt[:,1]] = 1
-
-      for i in range(curve_matching_indices['indices'][0][1].shape[0]):
-        ori_curveid = curve_matching_indices['indices'][0][1][i]
-        if (target_curves_list[0]['is_closed'][ori_curveid] >= 0.5):
-          gt_curve2corner[i] = 0.0
-
-      gt_curve2corner = gt_curve2corner[:, corner_matching_indices['indices'][0][1]]
-
-      assert(pred_curve2corner.shape == gt_curve2corner.shape)
-      # summary_loss_dict['topo_curve_corner'] = F.binary_cross_entropy(pred_curve2corner.view(-1), gt_curve2corner.view(-1)).item()
-      summary_loss_dict['topo_curve_corner'] = (pred_curve2corner - gt_curve2corner).abs().mean().item()
-      
-    else:
-      summary_loss_dict['topo_curve_corner'] = 0.0
-    
-    for k in summary_loss_dict:
-      if k in dict_sum:
-        dict_sum[k] += summary_loss_dict[k]
-      else:
-        dict_sum[k] = summary_loss_dict[k]
-
-    # print(list(summary_loss_dict.values()))
-    assert(len(summary_loss_dict) == 16)
-    test_statistics.append(list(summary_loss_dict.values()))
-    # sample_id.append(cur_id)
-    sample_name_list.append(cur_id)
-  for k in dict_sum:
-    dict_sum[k] = dict_sum[k] / (len(sample_name_list))
-
-  print('dict sum: ', dict_sum)
-  sample_name_list.append("mean")
-  test_statistics.append(list(dict_sum.values()))
-
-  # test_statistics.append(list(summary_loss_dict.values()))
-
-  # obj
-  np.savetxt(os.path.join(obj_dir, "final_evaluation.txt"), np.array(test_statistics))
-  with open(os.path.join(obj_dir, "test_sample_name.txt"), "w") as wf:
-    for sample_name in sample_name_list:
-      wf.write("{}\n".format(sample_name))
-  print(len(sample_name_list) - 1, "samples in test set")
-  
-  import pandas as pd
-  ## convert your array into a dataframe
-  df = pd.DataFrame(np.array(test_statistics))
-  # df.columns = list(summary_loss_dict.keys())
-  df.columns = list(dict_sum.keys())
-  df.index = sample_name_list
-  #title_row = pd.Series()
-  #row_df = pd.DataFrame([title_row])
-  #df = pd.concat([row_df, df], ignore_index=True)
-  
-  ## save to xlsx file
-  filepath = os.path.join(obj_dir, 'final_evaluation.xlsx')
-  df.to_excel(filepath, index=True)
-
 def load_complex_file(fn, device):
     n_curve_sample = 34
     n_patch_sample = 100
@@ -5777,7 +5208,6 @@ def eval_pipeline(flag_eval = True):
   '''
   
   if args.quicktest:
-    # train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="train_small",  with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise)#data_folder="/mnt/data/shilin/detr/ABC/train",
     train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="data/train_small",  with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)#data_folder="/mnt/data/shilin/detr/ABC/train",
   else:
     if args.parsenet:
@@ -5796,7 +5226,6 @@ def eval_pipeline(flag_eval = True):
 
   device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
   disable_aux_loss_output = True
-  #torch.autograd.set_detect_anomaly(True)
   tf.compat.v1.disable_eager_execution()
   
   model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model_tripath(device, flag_eval)
@@ -5875,183 +5304,6 @@ def eval_pipeline(flag_eval = True):
 
   elif args.evaltopo:
     return model_evaluation_topo(model_without_ddp, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion, train_data, device, start_iterations, flag_output = not args.no_output)
-
-def eval_files():
-  #eval corner curve patch distance from predicted files
-  import trimesh
-  from numpy import linalg as LA
-  from scipy.spatial import cKDTree
-  # def numpy_chamfer_dist(src, tgt):
-  #   #both src and tgt should be in shape (n,3)
-  #   len_src = src.shape[0]
-  #   len_tgt = tgt.shape[0]
-  #   # src_expand = np.repeat(src, len_tgt).reshape(len_src, len_tgt, 3)
-  #   # print("len src: ", len_src)
-  #   src_expand = np.tile(src.reshape(-1,1,3), (1, len_tgt, 1))
-  #   tgt_expand = np.tile(tgt.reshape(1,-1,3), (len_src, 1,1))
-  #   assert(src_expand.shape == tgt_expand.shape)
-  #   dist_mat = LA.norm(src_expand - tgt_expand, axis = -1)
-  #   dist_forward = dist_mat.min(0).mean()
-  #   dist_backward = dist_mat.min(-1).mean()
-  device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-  matcher_corner = build_matcher_corner(args, flag_eval = True)
-  matcher_curve = build_matcher_curve(args, flag_eval = True)
-  matcher_patch = build_matcher_patch(args, flag_eval = True)
-  #criterion
-  
-  corner_losses = ['cd']
-  curve_losses = ['cd']
-  patch_losses = ['cd']
-
-  corner_loss_criterion = SetCriterion_Corner(matcher_corner, {}, corner_eos_coef_cal, corner_losses).to(device)
-  curve_loss_criterion = SetCriterion_Curve(matcher_curve, {}, curve_eos_coef_cal, curve_losses).to(device)
-  patch_loss_criterion = SetCriterion_Patch(matcher_patch, {}, patch_eos_coef_cal, patch_losses).to(device)
-
-  def numpy_chamfer_dist(src, tgt):
-    kdtree1 = cKDTree(src)
-    dist_tgt, idx_tgt = kdtree1.query(tgt)
-    kdtree2 = cKDTree(tgt)
-    dist_src, idx_src = kdtree2.query(src)
-    return (dist_src.mean() + dist_tgt.mean()) / 2.0
-  gt_data_path = "/mnt/sdf1/haog/data/test_new"
-
-  path = os.path.join("experiments", args.experiment_name, "test_obj")
-  allfs = os.listdir(path)
-  all_valid_id = []
-  for f in allfs:
-    if f.endswith("_opt_post_mix_step5.obj"):
-      all_valid_id.append(int(f.split("_")[0]))
-  
-  print('valid size: ', len(all_valid_id))
-  
-  allstats = []
-  sum_dict = {}
-  
-  sample_id = []
-  sum_dict["corner_cd"] = 0.0
-  sum_dict["curve_cd"] = 0.0
-  sum_dict["patch_cd"] = 0.0
-
-  # samplecount = 0
-  nopatchcount = 0
-  for i in range(len(all_valid_id)):
-  # for i in range(3):
-    cur_id = all_valid_id[i]
-    if cur_id == 14964:
-      continue
-    print("id: ", cur_id)
-    gt_file = os.path.join(gt_data_path, '{:08d}.pkl'.format(cur_id))
-    #get corner curve and patch
-    f = open(gt_file, 'rb')
-    data = pickle.load(f)
-    curve_list = []
-    corner_id = []
-    corner_list = []
-    for curveid, curve in enumerate(data['curves']):
-      # print('pts shape: ', curve['points'][::3].shape)
-      curve_list.append(curve['points'][::3])
-      if not curve['start_vert_idx'] in corner_id:
-        corner_id.append(curve['start_vert_idx'])
-        corner_list.append(curve['points'][0])
-      if not curve['end_vert_idx'] in corner_id:
-        corner_id.append(curve['end_vert_idx'])
-        corner_list.append(curve['points'][-1])
-    curve = np.concatenate(curve_list)
-    corner = np.concatenate(corner_list).reshape(-1,3)
-
-    allpatch = data['surface_points'] #(10000, 6)
-    # print('patch shape: ', allpatch.shape)
-    # np.savetxt('gtpatch.xyz', allpatch)
-    # np.savetxt('gtcurve.xyz', curve)
-    # np.savetxt('gtcorner.xyz', corner)
-    #predinfo
-    pred_curve_file = os.path.join(path, "{}_opt_post_mix_curves_5.ply".format(cur_id))
-    pred_corner_file = os.path.join(path, "{}_opt_post_mix_corners_5.ply".format(cur_id))
-    pred_patch_file = os.path.join(path, "{}_opt_post_mix_step5.obj".format(cur_id))
-    pred_patch_mask = os.path.join(path, "{}_opt_post_mix_facemask.txt".format(cur_id))
-    pred_corres = os.path.join(path, "{}_opt_post_mix_final_topo.txt".format(cur_id))
-
-    if args.fittingonce:
-      pred_curve_file = os.path.join(path, "{}_opt_post_mix_curves_init.ply".format(cur_id))
-      pred_corner_file = os.path.join(path, "{}_opt_post_mix_corners_init.ply".format(cur_id))
-    
-    pred_curve = load_ply_pts(pred_curve_file)
-    pred_corner = load_ply_pts(pred_corner_file)
-    # np.savetxt('predcurve.xyz', pred_curve)
-    # np.savetxt('predcorner.xyz', pred_corner)
-
-    # a = np.zeros(21).reshape(7,3)
-    # b = a + 1
-    # dist = numpy_chamfer_dist(a,b)
-    # print("dist: ", dist)
-    dist_curve = numpy_chamfer_dist(pred_curve, curve)
-    dist_corner = 0.0
-    if pred_corner.shape[0] > 0 and corner.shape[0] > 0:
-      dist_corner = numpy_chamfer_dist(pred_corner, corner)
-
-    dist_patch = 0.0
-    n_sample = 10000
-    # print('mesh file: ', pred_patch_file)
-    mesh = trimesh.load(pred_patch_file)
-    #if there are no faces, set distance to 0
-    meshtype = str(type(mesh))
-    if meshtype.split(' ')[-1].split('.')[-1][:-2] != 'PointCloud':
-      pc, idx = mesh.sample(n_sample, return_index=True)
-      # print('pc shape: ', pc.shape)
-      dist_patch = numpy_chamfer_dist(pc, allpatch[:, :3])
-      # np.savetxt(os.path.join(path, "{}_opt_post_mix_step5.xyz".format(cur_id)), pc)
-      # np.savetxt(os.path.join(path, "{}_opt_post_mix_gt.xyz".format(cur_id)), allpatch[:, :3])
-      # np.savetxt('gt_patch.xyz', allpatch[:, :3])
-    else:
-      nopatchcount += 1
-    
-    #get patch point cloud
-    # pred_data = {}
-    
-
-    sum_dict["corner_cd"] += dist_corner
-    sum_dict["curve_cd"] += dist_curve
-    sum_dict["patch_cd"] += dist_patch
-    
-    #to be computed: corner/curve/patch precision/recall topo error
-
-    allstats.append([dist_corner, dist_curve, dist_patch])
-    sample_id.append(cur_id)
-
-    # print("corner dist: ", dist_corner)
-    # print("dist curve: ", dist_curve)
-    
-    # curvet = torch.tensor(curve,dtype=torch.float32).view(1,-1,3)
-    # cornert = torch.tensor(corner,dtype=torch.float32).view(1,-1,3)
-    # pred_curvet = torch.tensor(pred_curve,dtype=torch.float32).view(1,-1,3)
-    # pred_cornert = torch.tensor(pred_corner,dtype=torch.float32).view(1,-1,3)
-
-    # from chamferdist import ChamferDistance #distance not corrected
-    # chamferDist = ChamferDistance()
-    # # dist_curve = chamferDist(curvet, pred_curvet)
-    # dist_curve = chamferDist(curvet, curvet + 1.0)
-    # dist_corner = chamferDist(cornert, pred_cornert)
-    # print('cdist: {} {}'.format(dist_curve, dist_corner))
-
-  for k in sum_dict:
-      sum_dict[k] = sum_dict[k] / len(sample_id)
-
-  sample_id.append("mean")
-  allstats.append(list(sum_dict.values()))
-  print('samples with no patch: ', nopatchcount)
-  import pandas as pd
-  ## convert your array into a dataframe
-  df = pd.DataFrame(np.array(allstats))
-  df.columns = list(sum_dict.keys())
-  df.index = sample_id
-  #title_row = pd.Series()
-  #row_df = pd.DataFrame([title_row])
-  #df = pd.concat([row_df, df], ignore_index=True)
-  
-  ## save to xlsx file
-  filepath = os.path.join(path, 'final_triplecd.xlsx')
-  df.to_excel(filepath, index=True)  
-
 
 def pipeline_abc(rank, world_size):
   torch.autograd.set_detect_anomaly(True)
