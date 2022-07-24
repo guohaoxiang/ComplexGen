@@ -4114,7 +4114,7 @@ def eval_pipeline(flag_eval = True):
   '''
   
   if args.quicktest:
-    train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="data/train_small",  with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)#data_folder="/mnt/data/shilin/detr/ABC/train",
+    train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder="data/train_small",  with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)
   else:
     if args.parsenet:
       vis_test_folder = "data/vis_test"
@@ -4125,9 +4125,9 @@ def eval_pipeline(flag_eval = True):
         test_folder = os.path.join(base_folder, "partial/test")
 
     if args.vis_test:
-      train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder=vis_test_folder, with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)#data_folder="/mnt/data/shilin/detr/ABC/test",
+      train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder=vis_test_folder, with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)
     else:
-      train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder=test_folder, with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)#data_folder="/mnt/data/shilin/detr/ABC/test",
+      train_data = train_data_loader(args.batch_size, voxel_dim=voxel_dim, feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals,  data_folder=test_folder, with_distribute_sampler=False, flag_quick_test=args.quicktest, flag_noise=args.noise, flag_grid = args.patch_grid, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.eval_res_cov)
       
 
   device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -4210,10 +4210,8 @@ def eval_pipeline(flag_eval = True):
 def pipeline_abc(rank, world_size):
   torch.autograd.set_detect_anomaly(True)
   dist.init_process_group(backend='nccl', init_method='tcp://127.0.0.1:23257', world_size=world_size, rank=rank)
-
   assert(is_dist_avail_and_initialized())
   assert(get_world_size() == world_size)
-  
   # fix the seed for reproducibility
   '''
   seed = args.seed + rank
@@ -4226,7 +4224,7 @@ def pipeline_abc(rank, world_size):
     if args.quicktest:
       train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer) #
 
-      val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False, flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
+      val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/train_small", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False, flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)
     else:
       if args.parsenet:
         if not args.partial:
@@ -4234,18 +4232,17 @@ def pipeline_abc(rank, world_size):
         else:
           train_data, distribute_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/partial/train", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment,random_angle = args.random_angle, with_normal=args.input_normal_signals, flag_quick_test=args.quicktest,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer) #
       if not args.patch_grid:
-        val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="val_new_64", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
+        val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="val_new_64", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)
       else:
         if not args.partial:
-          val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/default/val", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
+          val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/default/val", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)
         else:
-          val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/partial/val", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)#data_folder="/mnt/data/shilin/detr/ABC/train",
+          val_data, val_data_sampler = train_data_loader(args.batch_size, voxel_dim=voxel_dim, data_folder="data/partial/val", feature_type=args.input_feature_type, pad1s=not args.backbone_feature_encode, rotation_augmentation=args.rotation_augment, with_normal=args.input_normal_signals, flag_quick_test=False,flag_noise=args.noise, flag_grid = args.patch_grid, num_angle = args.num_angles, flag_patch_uv=args.patch_uv, dim_grid = points_per_patch_dim, eval_res_cov = args.extra_single_chamfer)
 
   
   torch.cuda.set_device(rank)
   device = 'cuda:{}'.format(rank) if torch.cuda.is_available() else 'cpu'
   disable_aux_loss_output = True
-  #torch.autograd.set_detect_anomaly(True)
   tf.compat.v1.disable_eager_execution()
   model_shape, corner_loss_criterion, curve_loss_criterion, patch_loss_criterion = build_unified_model_tripath(device)
   
@@ -4257,9 +4254,7 @@ def pipeline_abc(rank, world_size):
   if True:
     corner_topo_params = {n:p for n, p in model_without_ddp.named_parameters() if p.requires_grad and ('corner_model.corner_topo_embed_curve' in n or 'curve_model.curve_topo_embed_corner' in n or 'corner_model.corner_topo_embed_patch' in n or 'patch_model.patch_topo_embed_corner' in n)}
   corner_geometry_params = {n:p for n, p in model_without_ddp.named_parameters() if p.requires_grad and 'corner_model.corner_position_embed' in n}
-  #print(corner_topo_params)
-  #print(corner_geometry_params)
-  
+
   optimizer = torch.optim.AdamW(param_dicts, lr=args.lr, weight_decay=args.weight_decay)
   lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, args.lr_drop, gamma = 0.5)
   
@@ -4275,7 +4270,6 @@ def pipeline_abc(rank, world_size):
   start_iterations = 0
   if(rank == 0):
     print("Try to restore from checkpoint")
-  
 
   if(args.checkpoint_path is not None):
     if(os.path.exists(args.checkpoint_path)):
@@ -4364,7 +4358,6 @@ def pipeline_abc(rank, world_size):
         batch_corner_numbers.append((corner_batch_idx==i).sum())
       target_corner_points_list = torch.split(corner_points, batch_corner_numbers)
       t1 = time.time()
-      #print("{}s elapsed for data preparation".format(t1-t0))
       if(train_iter < profile_iter and perform_profile and train_iter > 2):
         profile_dict['data_preparation'].append(t1 - t0)
       
@@ -4373,7 +4366,6 @@ def pipeline_abc(rank, world_size):
       sparse_locations, corner_predictions, curve_predictions, patch_predictions = model_shape(locations, features)
       t1 = time.time()
 
-      #print("{}s elapsed for network forwarding".format(t1-t0))
       if(train_iter < profile_iter and perform_profile and train_iter > 2):
         profile_dict['network_forwarding'].append(t1 - t0)
       
@@ -4581,7 +4573,6 @@ def pipeline_abc(rank, world_size):
       for name, param in model_shape.named_parameters():
         if param.grad is None:
             print("param no grad", name)
-        
       
       if max_norm > 0:
           if not args.clip_value:
