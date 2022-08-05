@@ -23,7 +23,7 @@ Extensive tests on large scale CAD datasets demonstrate that the modeling of B-R
 The pipeline contains 3 main phases, we will show how to run the code for each phase, and provide the corresponding checkpoint/data.
 
 ## Data downloading
-We provide the pre-processed ABC dataset used for training and evaluating ComplexNet [here](https://pan.baidu.com/s/1PStVn2h_kkKtYsc-LYF7sQ?pwd=asdf), which can be extracted by [7-Zip](https://www.7-zip.org/). You can find the details of pre-processing pipelines in the [supplemental material](https://haopan.github.io/data/ComplexGen_supplemental.zip) of our paper.
+We provide the pre-processed ABC dataset used for training and evaluating ComplexNet, you can download it from [BaiduYun](https://pan.baidu.com/s/1PStVn2h_kkKtYsc-LYF7sQ?pwd=asdf) or [OneDrive](https://1drv.ms/u/s!Ar3e2GVr5NQN9WluD3_SdPUSBNRN?e=uRgd2B), which can be extracted by [7-Zip](https://www.7-zip.org/). You can find the details of pre-processing pipelines in the [supplemental material](https://haopan.github.io/data/ComplexGen_supplemental.zip) of our paper.
 
 The data contains surface points along with normals, and its ground truth B-Rep labels. After extracting the zip file under root directory, the data should be organized as the following structure:
 ```
@@ -48,7 +48,7 @@ ComplexGen
 
 <!-- Here _noise_002_ and _noise_005_ means noisy point clouds with normal-distribution-perturbation of mean value _0.02_ and _0.05_ respectively. -->
 
-**\[Optional\]** You can also find the output of each phase [here](https://pan.baidu.com/s/1vO0nTSBbCw52EWUDZI7X4g?pwd=asdf). For each test model, there will be 4 or 5 outputs:
+**\[Optional\]** You can also find the output of each phase from [BaiduYun](https://pan.baidu.com/s/1vO0nTSBbCw52EWUDZI7X4g?pwd=asdf) or [OneDrive](https://1drv.ms/u/s!Ar3e2GVr5NQN9WoahuXFZ2eiVS3Y?e=4nQfIi). For each test model, there will be 4 or 5 outputs:
 ```
 *_input.ply: Input point cloud
 *_prediction.pkl: Output of 'ComplexNet prediction' phase
@@ -76,7 +76,7 @@ This command will start the training of ComplexNet on a small dataset with 64 CA
 
 ### Testing
 
-To test the trained ComplexNet, please first download the trained weights used in our paper [here](https://pan.baidu.com/s/1fvwURG1FWjazvQpVVASwMg?pwd=asdf), and unzip it under the root directory:
+To test the trained ComplexNet, please first download the trained weights used in our paper from [BaiduYun](https://pan.baidu.com/s/1fvwURG1FWjazvQpVVASwMg?pwd=asdf) or [OneDrive](https://1drv.ms/u/s!Ar3e2GVr5NQN9Wyk28t7vqCWQZnO?e=3OZapR), and unzip it under the root directory:
 
 ```
 ComplexGen
