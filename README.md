@@ -68,6 +68,9 @@ The description and visualization of each file type can be found in [pickle desc
         $ apt-get update && apt-get install libopenblas-dev -y && conda install numpy mkl-include pytorch cudatoolkit=10.1 -c pytorch -y && apt-get install git -y && pip install git+https://github.com/NVIDIA/MinkowskiEngine.git@v0.5.0 --user
         $ cd chamferdist && python setup.py install --user && pip install numba --user && pip install methodtools --user && pip install tensorflow-gpu --user && pip install scipy --user  && pip install rtree --user && pip install plyfile --user && pip install trimesh --user && cd ..
 
+
+**\[Note\]:** If the 'apt-get update' gets error. To solve this problem, you can firstly run command 'rm /etc/apt/sources.list.d/cuda.list' (details shown in NVIDIA/nvidia-docker#619).
+
 To test if the environment is set correctly, run:
         
         $ ./scripts/train_small.sh
