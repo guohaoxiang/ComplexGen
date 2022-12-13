@@ -286,15 +286,17 @@ def complexjson_to_obj(fn):
         curve_faces = []
         for i in range(len(curve_pts[cid]) - 1):
             cur_verts, cur_faces = gen_cylinder_from_two_points(curve_pts[cid][i], curve_pts[cid][i + 1], counter)
-            curve_verts.append(cur_verts)
-            curve_faces += cur_faces
-            counter += cur_verts.shape[0]
+            if (len(cur_faces) > 0):
+              curve_verts.append(cur_verts)
+              curve_faces += cur_faces
+              counter += cur_verts.shape[0]
 
         if curve_close_logits[cid][0] < curve_close_logits[cid][1]:
             cur_verts, cur_faces = gen_cylinder_from_two_points(curve_pts[cid][-1], curve_pts[cid][0], counter)
-            curve_verts.append(cur_verts)
-            curve_faces += cur_faces
-            counter += cur_verts.shape[0]
+            if (len(cur_faces) > 0):
+              curve_verts.append(cur_verts)
+              curve_faces += cur_faces
+              counter += cur_verts.shape[0]
 
         all_group_name.append('curve{}'.format(cid))
         allmtl_group.append('cylinder')
