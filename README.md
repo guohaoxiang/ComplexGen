@@ -135,7 +135,8 @@ A set of complex file will be generated under _ComplexGen/experiments/default/te
 
 ## Phase 3: Geometric refinement
 
-Code of this phase can be compiled only under Windows, as I fail to compile and link [clapack](https://netlib.org/clapack/) with our project under Linux. Sorry for the inconvenience :-(
+Code of this phase can be compiled only under Windows. If you want to build it under Linux, please follow [here](https://azaan-zheng.github.io/2023/02/12/CAD%E5%AE%9E%E4%BD%93%E5%BB%BA%E6%A8%A1-ComplexGen%E5%87%A0%E4%BD%95%E4%BC%98%E5%8C%96%E9%85%8D%E7%BD%AE/).
+<!-- as I fail to compile and link [clapack](https://netlib.org/clapack/) with our project under Linux. Sorry for the inconvenience :-( -->
 
 ### Environment setup
 libigl and Eigen are needed, you can install them via [vcpkg](https://github.com/microsoft/vcpkg)
