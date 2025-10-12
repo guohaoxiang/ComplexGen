@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>婚礼邀请函</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .invitation-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 40px 30px;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="hearts" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M10,6 C10,6 8,4 6,4 C4,4 2,6 2,8 C2,10 4,12 10,16 C16,12 18,10 18,8 C18,6 16,4 14,4 C12,4 10,6 10,6 Z" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23hearts)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .content {
+            padding: 50px 40px;
+            text-align: center;
+        }
+
+        .couple-names {
+            font-size: 2.2em;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+
+        .and-symbol {
+            font-size: 1.5em;
+            color: #667eea;
+            margin: 0 20px;
+            font-style: italic;
+        }
+
+        .invitation-text {
+            font-size: 1.1em;
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+
+        .wedding-details {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .detail-item {
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            color: #333;
+            display: inline-block;
+            width: 80px;
+            text-align: right;
+            margin-right: 15px;
+        }
+
+        .detail-value {
+            color: #666;
+        }
+
+        .rsvp-section {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+
+        .rsvp-title {
+            font-size: 1.3em;
+            color: #8b4513;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .rsvp-text {
+            color: #8b4513;
+            font-size: 1em;
+            margin-bottom: 20px;
+        }
+
+        .rsvp-button {
+            background: #8b4513;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .rsvp-button:hover {
+            background: #a0522d;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 0.9em;
+            border-top: 1px solid #eee;
+        }
+
+        .decorative-line {
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #667eea, transparent);
+            margin: 20px auto;
+        }
+
+        @media (max-width: 600px) {
+            .invitation-container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .couple-names {
+                font-size: 1.8em;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invitation-container">
+        <div class="header">
+            <h1>💕 婚礼邀请函 💕</h1>
+            <div class="subtitle">Wedding Invitation</div>
+        </div>
+        
+        <div class="content">
+            <div class="couple-names">
+                张先生
+                <span class="and-symbol">&</span>
+                李女士
+            </div>
+            
+            <div class="decorative-line"></div>
+            
+            <div class="invitation-text">
+                我们诚挚地邀请您参加我们的婚礼庆典<br>
+                见证我们人生中最美好的时刻
+            </div>
+            
+            <div class="wedding-details">
+                <div class="detail-item">
+                    <span class="detail-label">日期：</span>
+                    <span class="detail-value">2024年6月15日（星期六）</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">时间：</span>
+                    <span class="detail-value">下午2:00</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">地点：</span>
+                    <span class="detail-value">北京香格里拉大酒店宴会厅</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">地址：</span>
+                    <span class="detail-value">北京市海淀区紫竹院路29号</span>
+                </div>
+            </div>
+            
+            <div class="rsvp-section">
+                <div class="rsvp-title">💌 敬请回复</div>
+                <div class="rsvp-text">
+                    请于2024年5月30日前回复是否参加<br>
+                    您的到来将是我们最大的荣幸
+                </div>
+                <a href="tel:+86-138-0000-0000" class="rsvp-button">电话回复</a>
+                <a href="mailto:wedding@example.com" class="rsvp-button" style="margin-left: 15px;">邮件回复</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>期待与您共同分享这份喜悦！</p>
+            <p>张先生 & 李女士 敬邀</p>
+        </div>
+    </div>
+</body>
+</html>
