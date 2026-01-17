@@ -79,7 +79,11 @@ This command will start the training of ComplexNet on a small dataset with 64 CA
 
 ### Testing
 
-To test the trained ComplexNet, please first download the trained weights used in our paper from [BaiduYun](https://pan.baidu.com/s/1fvwURG1FWjazvQpVVASwMg?pwd=asdf) or [OneDrive](https://1drv.ms/u/s!Ar3e2GVr5NQN9Wyk28t7vqCWQZnO?e=3OZapR), and unzip it under the root directory:
+
+<!--To test the trained ComplexNet, please first download the trained weights used in our paper from [BaiduYun](https://pan.baidu.com/s/1fvwURG1FWjazvQpVVASwMg?pwd=asdf) or [OneDrive](https://1drv.ms/u/s!Ar3e2GVr5NQN9Wyk28t7vqCWQZnO?e=3OZapR), and unzip it under the root directory:-->
+
+To test the trained ComplexNet, please first download the trained weights used in our paper from [BaiduYun](https://pan.baidu.com/s/1fvwURG1FWjazvQpVVASwMg?pwd=asdf) or [GoogleDrive](https://drive.google.com/file/d/1zwjFWiXIJj1sccP32OD1wUyDCWbGd-0T/view?usp=sharing), and unzip it under the root directory:
+
 
 ```
 ComplexGen
